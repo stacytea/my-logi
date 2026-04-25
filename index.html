@@ -188,6 +188,16 @@ tbody tr:hover td{background:var(--surface2)}
 .info-pill{font-size:12px;color:var(--text2);background:var(--surface2);border:1px solid var(--border);border-radius:999px;padding:3px 10px}
 .info-pill b{color:var(--text);font-weight:500}
 @media(max-width:768px){.stat-grid{grid-template-columns:1fr 1fr}}
+.status-step.active-filter .dot{
+  border-color: var(--accent);
+  background: var(--accent);
+  color: #fff;
+}
+
+.status-step.active-filter .slabel{
+  color: var(--accent);
+  font-weight: 600;
+}
 </style>
 </head>
 <body>
@@ -871,8 +881,12 @@ function renderParcels(){
       // flow bar
       let flowHtml='<div class="status-flow">';
       STATUSES.forEach((s,i)=>{
-        const cls=i<si?'done':i===si?'current':'';
-        flowHtml+=`<div class="status-step ${cls}" onclick="setParcelStatus(${p.id},'${s.key}')" title="${s.label}"><div class="dot">${i<=si?s.icon:'·'}</div><div class="slabel">${s.label}</div></div>`;
+        let cls = i<si?'done':i===si?'current':'';
+
+if(parcelFilter === s.key){
+  cls += ' active-filter';
+}
+        flowHtml+=`<div class="status-step ${cls}" onclick="filterByStatus('${s.key}')" title="${s.label}"><div class="dot">${i<=si?s.icon:'·'}</div><div class="slabel">${s.label}</div></div>`;
         if(i<STATUSES.length-1)flowHtml+=`<div class="status-line ${i<si?'done':''}"></div>`;
       });
       flowHtml+='</div>';
@@ -1727,6 +1741,14 @@ const _expose=['openAddParcel','openEditParcel','deleteParcel','setParcelStatus'
   'confirmResolve','toast','copyText',
 ];
 _expose.forEach(fn=>{if(typeof eval(fn)==='function')window[fn]=eval(fn);});
+  window.filterByStatus = function(status){
+  if(parcelFilter === status){
+    parcelFilter = 'active';
+  }else{
+    parcelFilter = status;
+  }
+  renderParcels();
+};
 </script>
 </body>
 </html>
