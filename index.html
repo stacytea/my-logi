@@ -842,14 +842,16 @@ function renderParcels(){
       <div class="s-label">⚠ 即將到期</div><div class="s-val" style="${urgent>0?'color:var(--warn)':''}">${urgent}</div><div class="s-sub">在倉7天內</div></div>
     <div class="stat-card"><div class="s-label">全部包裹</div><div class="s-val">${all.length}</div></div>
   </div>`;
-  const filterHtml=`<div class="status-filter-row">
-    <button class="sfilter ${parcelFilter==='active'?'active':''}" onclick="parcelFilter='active';renderParcels()">全部進行中 (${active.length})</button>
-    <button class="sfilter ${parcelFilter==='ordered'?'active':''}" onclick="parcelFilter='ordered';renderParcels()">🛒 已下單 (${all.filter(p=>p.status==='ordered').length})</button>
-    <button class="sfilter ${parcelFilter==='shipping_to_wh'?'active':''}" onclick="parcelFilter='shipping_to_wh';renderParcels()">✈️ 寄往集運倉 (${all.filter(p=>p.status==='shipping_to_wh').length})</button>
-    <button class="sfilter ${parcelFilter==='in_wh'?'active':''}" onclick="parcelFilter='in_wh';renderParcels()">🏢 已入倉 (${all.filter(p=>p.status==='in_wh').length})</button>
-    <button class="sfilter ${parcelFilter==='shipping_to_tw'?'active':''}" onclick="parcelFilter='shipping_to_tw';renderParcels()">🚢 出貨中 (${all.filter(p=>p.status==='shipping_to_tw').length})</button>
-    <button class="sfilter ${parcelFilter==='received'?'active':''}" onclick="parcelFilter='received';renderParcels()">✓ 已收到 (${received.length})</button>
-    <button class="sfilter ${parcelFilter==='all'?'active':''}" onclick="parcelFilter='all';renderParcels()">全部 (${all.length})</button>
+  const filterHtml=`<div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap">
+    <select onchange="parcelFilter=this.value;renderParcels()" style="padding:8px 12px;border:1px solid var(--border2);border-radius:999px;font-size:13px;font-family:'Noto Sans TC',sans-serif;background:var(--surface);color:var(--text);cursor:pointer;appearance:none;-webkit-appearance:none;padding-right:28px;background-image:url('data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%2212%22 height=%2212%22 viewBox=%220 0 12 12%22><path fill=%22%239e9b95%22 d=%22M6 8L1 3h10z%22/></svg>');background-repeat:no-repeat;background-position:right 10px center">
+      <option value="active" ${parcelFilter==='active'?'selected':''}>全部進行中 (${active.length})</option>
+      <option value="ordered" ${parcelFilter==='ordered'?'selected':''}>🛒 已下單 (${all.filter(p=>p.status==='ordered').length})</option>
+      <option value="shipping_to_wh" ${parcelFilter==='shipping_to_wh'?'selected':''}>✈️ 寄往集運倉 (${all.filter(p=>p.status==='shipping_to_wh').length})</option>
+      <option value="in_wh" ${parcelFilter==='in_wh'?'selected':''}>🏢 已入倉 (${all.filter(p=>p.status==='in_wh').length})</option>
+      <option value="shipping_to_tw" ${parcelFilter==='shipping_to_tw'?'selected':''}>🚢 出貨中 (${all.filter(p=>p.status==='shipping_to_tw').length})</option>
+      <option value="received" ${parcelFilter==='received'?'selected':''}>✓ 已收到 (${received.length})</option>
+      <option value="all" ${parcelFilter==='all'?'selected':''}>全部 (${all.length})</option>
+    </select>
   </div>`;
   const singleStatuses=['ordered','shipping_to_wh','in_wh','shipping_to_tw','received'];
   let shown=parcelFilter==='active'?active:parcelFilter==='received'?received:parcelFilter==='all'?all:singleStatuses.includes(parcelFilter)?all.filter(p=>p.status===parcelFilter):active;
