@@ -602,11 +602,43 @@ async function loadFromCloud(){
       if(!D.splitRecords)D.splitRecords=[];
       if(!D.rates)D.rates=DEF.rates;
     }else{
-      const local=localStorage.getItem('wms_v3');
-      if(local){try{D=JSON.parse(local);}catch(e){}await saveToCloud();}
+      // 雲端沒資料，嘗試從 localStorage 搬移
+      const local=localStorage.getItem('wms_v3')||localStorage.getItem('wms_v2');
+      if(local){
+        try{
+          const parsed=JSON.parse(local);
+          if(parsed&&(parsed.parcels||parsed.warehouses)){
+            D=parsed;
+            if(!D.countries)D.countries=DEF.countries;
+            if(!D.rateHistory)D.rateHistory=[];
+            if(!D.splitRecords)D.splitRecords=[];
+            if(!D.rates)D.rates=DEF.rates;
+            await saveToCloud();
+            setSaveStatus('saved');
+          }
+        }catch(e){}
+      }
     }
   }catch(e){console.error('載入失敗',e);}
 }
+
+window.restoreFromLocal=async function(){
+  const local=localStorage.getItem('wms_v3')||localStorage.getItem('wms_v2');
+  if(!local){toast('本機沒有找到舊資料');return;}
+  try{
+    const parsed=JSON.parse(local);
+    if(parsed&&(parsed.parcels||parsed.warehouses)){
+      D=parsed;
+      if(!D.countries)D.countries=DEF.countries;
+      if(!D.rateHistory)D.rateHistory=[];
+      if(!D.splitRecords)D.splitRecords=[];
+      if(!D.rates)D.rates=DEF.rates;
+      await saveToCloud();
+      window.nav('parcels');
+      toast('✓ 本機資料已還原！');
+    }else{toast('找不到有效資料');}
+  }catch(e){toast('還原失敗：'+e.message);}
+};
 
 // ===== AUTH FUNCTIONS (exposed to window) =====
 window.doLogin=async function(){
@@ -1021,7 +1053,7 @@ function saveParcel(){
   if(editingParcelId){D.parcels=D.parcels.map(x=>x.id===editingParcelId?p:x);}else{D.parcels.push(p);}
   window._save();closeOverlay('parcel');renderParcels();toast(editingParcelId?'包裹已更新':'包裹已新增');
 }
-function deleteParcel(id){confirmDialog('確定刪除此包裹？').then(ok=>{if(!ok)return;D.parcels=D.parcels.filter(p=>p.id!==id);window._window._save();renderParcels();});}
+function deleteParcel(id){confirmDialog('確定刪除此包裹？').then(ok=>{if(!ok)return;D.parcels=D.parcels.filter(p=>p.id!==id);window._save();renderParcels();});}
 function onParcelCountryChange(){}
 function onWarehouseSelect(){}
 
@@ -1128,14 +1160,14 @@ function saveShipment(){
   const s={id:Date.now(),name:document.getElementById('s-name').value.trim(),country:document.getElementById('s-country').value,shipdate:document.getElementById('s-shipdate').value,paydate:document.getElementById('s-paydate').value,currency:document.getElementById('s-currency').value,freight:parseFloat(document.getElementById('s-freight').value)||0,intltrack:document.getElementById('s-intltrack').value.trim(),note:document.getElementById('s-note').value.trim(),parcelIds:[...selectedParcelIds],createdAt:new Date().toISOString().slice(0,10)};
   if(!s.name){toast('請輸入訂單名稱');return}
   D.parcels.forEach(p=>{if(selectedParcelIds.includes(p.id))p.status='shipping_to_tw';});
-  D.shipments.push(s);window._window._save();closeOverlay('shipment');renderShipments();toast('出貨訂單已建立');
+  D.shipments.push(s);window._save();closeOverlay('shipment');renderShipments();toast('出貨訂單已建立');
 }
 function deleteShipment(id){
   confirmDialog('刪除訂單後，關聯包裹狀態將還原為在倉。','確認刪除訂單').then(ok=>{
     if(!ok)return;
     const s=D.shipments.find(x=>x.id===id);
     if(s)D.parcels.forEach(p=>{if(s.parcelIds.includes(p.id))p.status='in_wh';});
-    D.shipments=D.shipments.filter(x=>x.id!==id);window._window._save();renderShipments();
+    D.shipments=D.shipments.filter(x=>x.id!==id);window._save();renderShipments();
   });
 }
 function openTrackingModal(id){editingTrackId=id;const s=D.shipments.find(x=>x.id===id);document.getElementById('track-no').value=s?.intltrack||'';openOverlay('tracking');}
@@ -1211,7 +1243,7 @@ function saveWarehouse(){
   if(editingWHId){D.warehouses=D.warehouses.map(w=>w.id===editingWHId?wh:w);}else{D.warehouses.push(wh);}
   window._save();closeOverlay('warehouse');renderWarehouses();toast('集運倉資料已儲存');
 }
-function deleteWarehouse(id){confirmDialog('確定刪除此集運倉？').then(ok=>{if(!ok)return;D.warehouses=D.warehouses.filter(w=>w.id!==id);window._window._save();renderWarehouses();});}
+function deleteWarehouse(id){confirmDialog('確定刪除此集運倉？').then(ok=>{if(!ok)return;D.warehouses=D.warehouses.filter(w=>w.id!==id);window._save();renderWarehouses();});}
 function saveCountry(){
   const c={id:'C'+Date.now(),flag:document.getElementById('c-flag').value.trim()||'🏳',name:document.getElementById('c-name').value.trim(),currency:document.getElementById('c-currency').value.trim().toUpperCase(),currencyName:document.getElementById('c-currency-name').value.trim()};
   if(!c.name||!c.currency){toast('請填入國別名稱與幣別代號');return}
@@ -1222,7 +1254,7 @@ function saveCountry(){
 function deleteCountry(id){
   confirmDialog('確定刪除此國別？').then(ok=>{
     if(!ok)return;
-    D.countries=D.countries.filter(c=>c.id!==id);window._window._save();renderWarehouses();
+    D.countries=D.countries.filter(c=>c.id!==id);window._save();renderWarehouses();
   });
 }
 
@@ -1248,6 +1280,7 @@ function renderRates(){
       </div>`).join('');
   const calcOpts=currencies.map(c=>`<option value="${c.currency}">${c.currency} ${c.currencyName}</option>`).join('');
   document.getElementById('main-content').innerHTML=`
+    <div class="section-head"><h2 style="font-size:16px;font-weight:600">匯率設定</h2></div>
     <div class="card">
       <div style="font-weight:600;margin-bottom:6px">新增匯率記錄</div>
       <div style="font-size:12px;color:var(--text3);margin-bottom:14px">每次信用卡結帳日可分開記錄，包裹和分帳可選擇對應哪一筆</div>
@@ -1268,6 +1301,11 @@ function renderRates(){
         <div class="field"><label>金額</label><input type="number" id="calc-amt" placeholder="輸入金額" oninput="doCalc()"></div>
         <div class="field"><label>台幣（約）</label><input type="text" id="calc-result" readonly></div>
       </div>
+    </div>
+    <div class="card" style="border-color:var(--border2)">
+      <div style="font-weight:600;margin-bottom:6px">🔧 資料工具</div>
+      <div style="font-size:12px;color:var(--text3);margin-bottom:12px">如果換裝置後資料不見，可以嘗試從本機還原</div>
+      <button class="btn" onclick="window.restoreFromLocal()">📥 從本機還原舊資料</button>
     </div>`;
 }
 function saveRateRecord(){
@@ -1280,7 +1318,7 @@ function saveRateRecord(){
   D.rateHistory.push(rec);Object.assign(D.rates,rates);D.rates.date=rec.date;
   window._save();renderRates();toast('匯率記錄已儲存');
 }
-function deleteRateRecord(id){confirmDialog('刪除此匯率記錄？').then(ok=>{if(!ok)return;D.rateHistory=D.rateHistory.filter(r=>r.id!==id);window._window._save();renderRates();});}
+function deleteRateRecord(id){confirmDialog('刪除此匯率記錄？').then(ok=>{if(!ok)return;D.rateHistory=D.rateHistory.filter(r=>r.id!==id);window._save();renderRates();});}
 function doCalc(){
   const cur=document.getElementById('calc-cur').value;
   const amt=parseFloat(document.getElementById('calc-amt').value)||0;
@@ -1502,7 +1540,7 @@ function saveSplitRecord(){
   else{D.splitRecords.push(rec);}
   window._save();closeOverlay('split-edit');renderSplit();toast(editingSplitId?'分帳已更新':'分帳記錄已儲存');
 }
-function deleteSplitRecord(id){confirmDialog('確定刪除此分帳記錄？').then(ok=>{if(!ok)return;D.splitRecords=D.splitRecords.filter(r=>r.id!==id);window._window._save();renderSplit();});}
+function deleteSplitRecord(id){confirmDialog('確定刪除此分帳記錄？').then(ok=>{if(!ok)return;D.splitRecords=D.splitRecords.filter(r=>r.id!==id);window._save();renderSplit();});}
 
 function exportSplitImage(id){
   const rec=D.splitRecords.find(r=>r.id===id);if(!rec)return;
