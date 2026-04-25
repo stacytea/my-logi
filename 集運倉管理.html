@@ -1,0 +1,1682 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>集運倉管理系統</title>
+<link rel="icon" href="https://fav.farm/📦">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#f5f3ef;--surface:#fff;--surface2:#f0ede8;--border:#ddd9d2;--border2:#c8c4bc;
+  --text:#1a1814;--text2:#6b6760;--text3:#9e9b95;
+  --accent:#2d5a27;--accent-bg:#eef4ed;--accent2:#8b5e3c;--accent2-bg:#f5ede5;
+  --danger:#b03a2e;--danger-bg:#fdf0ee;--warn:#8a6914;--warn-bg:#fdf6e3;
+  --ok:#2d5a27;--ok-bg:#eef4ed;--r:6px;--rl:10px;
+  --shadow:0 1px 3px rgba(0,0,0,.06),0 1px 2px rgba(0,0,0,.04);
+  --shadow-lg:0 4px 16px rgba(0,0,0,.08),0 2px 6px rgba(0,0,0,.04);
+}
+body{font-family:'Noto Sans TC',sans-serif;background:var(--bg);color:var(--text);font-size:14px;min-height:100vh;line-height:1.5}
+.app-shell{display:flex;flex-direction:column;min-height:100vh}
+.header{background:var(--surface);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:50}
+/* ALERT BAR */
+.alert-bar{display:none;background:var(--warn-bg);border-bottom:1px solid #e8d080;padding:8px 24px;font-size:12px;color:var(--warn);gap:12px;align-items:center;flex-wrap:wrap}
+.alert-bar.show{display:flex}
+.alert-chip{background:#fff;border:1px solid var(--warn);border-radius:999px;padding:2px 10px;cursor:pointer;white-space:nowrap;font-size:11px}
+.alert-chip:hover{background:var(--warn);color:#fff}
+.header-top{display:flex;align-items:center;justify-content:space-between;padding:0 16px;height:48px;border-bottom:1px solid var(--border)}
+.header-logo{display:flex;align-items:center;gap:8px;min-width:0;flex:1}
+.header-logo h1{font-size:15px;font-weight:600;letter-spacing:.01em;white-space:nowrap}
+.topbar-actions{display:flex;gap:8px;flex-shrink:0}
+/* 頂部導覽（電腦版） */
+.top-nav{display:none;padding:0 16px;gap:2px;overflow-x:auto;border-bottom:1px solid var(--border);background:var(--surface)}
+.top-nav-item{display:flex;align-items:center;gap:6px;padding:10px 12px;border:none;background:none;cursor:pointer;font-size:13px;font-family:'Noto Sans TC',sans-serif;color:var(--text2);white-space:nowrap;border-bottom:2px solid transparent;margin-bottom:-1px;transition:all .15s;border-radius:0;font-weight:400}
+.top-nav-item:hover{color:var(--text);background:var(--surface2)}
+.top-nav-item.active{color:var(--accent);border-bottom-color:var(--accent);font-weight:500}
+.top-nav-item .icon{font-size:14px}
+/* 底部導覽（手機版） */
+.bottom-nav{display:flex;background:var(--surface);border-top:1px solid var(--border);position:sticky;bottom:0;z-index:50;box-shadow:0 -1px 8px rgba(0,0,0,.06)}
+.bnav-item{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;padding:8px 4px;border:none;background:none;cursor:pointer;font-family:'Noto Sans TC',sans-serif;color:var(--text3);transition:all .15s;min-height:56px}
+.bnav-item:hover{background:var(--surface2)}
+.bnav-item.active{color:var(--accent)}
+.bnav-icon{font-size:18px;line-height:1}
+.bnav-label{font-size:10px;font-weight:500;white-space:nowrap}
+.bnav-item.active .bnav-label{color:var(--accent)}
+/* 電腦版：頂部導覽顯示，底部隱藏 */
+@media(min-width:700px){
+  .header-top{padding:0 24px;height:52px}
+  .header-logo h1{font-size:15px;font-weight:700}
+  .top-nav{display:flex}
+  .bottom-nav{display:none}
+  .content{padding:24px 28px 24px}
+}
+/* 內容底部留空給底部導覽列（手機） */
+.content{padding:16px 16px 80px;max-width:1100px;margin:0 auto}
+.main{flex:1}.content{padding:24px 28px;max-width:1100px;margin:0 auto}
+@media(max-width:600px){.content{padding:16px}}
+/* CARDS */
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:20px;margin-bottom:14px;box-shadow:var(--shadow)}
+.stat-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:18px}
+.stat-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:14px 16px;box-shadow:var(--shadow)}
+.stat-card .s-label{font-size:11px;color:var(--text3);margin-bottom:6px;letter-spacing:.04em}
+.stat-card .s-val{font-size:26px;font-weight:700;line-height:1}
+.stat-card .s-sub{font-size:11px;color:var(--text3);margin-top:4px}
+/* BUTTONS */
+.btn{padding:8px 14px;border:1px solid var(--border2);border-radius:var(--r);background:var(--surface);cursor:pointer;font-size:13px;font-family:'Noto Sans TC',sans-serif;color:var(--text);transition:all .12s;display:inline-flex;align-items:center;gap:6px;white-space:nowrap;font-weight:400}
+.btn:hover{background:var(--surface2)}.btn:active{transform:scale(.98)}
+.btn.primary{background:var(--accent);color:#fff;border-color:var(--accent)}.btn.primary:hover{background:#245220}
+.btn.danger{color:var(--danger);border-color:var(--danger)}.btn.danger:hover{background:var(--danger-bg)}
+.btn.sm{padding:5px 10px;font-size:12px}.btn.xs{padding:3px 7px;font-size:11px}
+.btn.ghost{border-color:transparent;background:transparent}.btn.ghost:hover{background:var(--surface2);border-color:var(--border)}
+/* FORMS */
+.form-row{display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;margin-bottom:10px}
+.field{display:flex;flex-direction:column;gap:5px;flex:1;min-width:100px}
+.field label{font-size:12px;color:var(--text2);font-weight:500}
+.field input,.field select,.field textarea{padding:8px 11px;border:1px solid var(--border2);border-radius:var(--r);font-size:13px;font-family:'Noto Sans TC',sans-serif;background:var(--surface);color:var(--text);width:100%;transition:border .12s}
+.field input:focus,.field select:focus,.field textarea:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px rgba(45,90,39,.1)}
+.field textarea{resize:vertical;min-height:72px}.field input[readonly]{background:var(--surface2);cursor:default}
+/* BADGES */
+.badge{display:inline-block;padding:2px 8px;border-radius:999px;font-size:11px;font-weight:500;white-space:nowrap}
+.badge-country{background:var(--surface2);color:var(--text2);border:1px solid var(--border)}
+.badge-ok{background:var(--ok-bg);color:var(--ok)}.badge-warn{background:var(--warn-bg);color:var(--warn)}
+.badge-danger{background:var(--danger-bg);color:var(--danger)}.badge-gray{background:var(--surface2);color:var(--text3)}
+.badge-accent2{background:var(--accent2-bg);color:var(--accent2)}
+/* TABLE */
+.table-wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{text-align:left;padding:9px 12px;color:var(--text3);font-weight:500;font-size:11px;letter-spacing:.05em;border-bottom:1px solid var(--border);text-transform:uppercase}
+td{padding:10px 12px;border-bottom:1px solid var(--border);vertical-align:middle}
+tr:last-child td{border-bottom:none}
+tbody tr:hover td{background:var(--surface2)}
+.mono{font-family:'DM Mono',monospace;font-size:12px}
+/* MODALS */
+.overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.3);z-index:200;align-items:center;justify-content:center;backdrop-filter:blur(2px)}
+.overlay.open{display:flex}
+.modal{background:var(--surface);border-radius:var(--rl);padding:24px;width:90%;max-width:580px;max-height:88vh;overflow-y:auto;box-shadow:var(--shadow-lg)}
+.modal-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px}
+.modal-header h3{font-size:16px;font-weight:600}
+.modal-close{background:none;border:none;font-size:20px;cursor:pointer;color:var(--text3);padding:0 4px;line-height:1}
+.modal-close:hover{color:var(--text)}
+.modal-footer{display:flex;gap:8px;justify-content:flex-end;margin-top:18px;padding-top:14px;border-top:1px solid var(--border)}
+/* SECTION HEADER */
+.section-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+.section-head h2{font-size:16px;font-weight:600}
+/* WAREHOUSE CARD — collapsible */
+.wh-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:10px;margin-bottom:12px}
+.wh-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);box-shadow:var(--shadow);overflow:hidden}
+.wh-card-head{display:flex;align-items:center;justify-content:space-between;padding:12px 14px;cursor:pointer;user-select:none;transition:background .12s}
+.wh-card-head:hover{background:var(--surface2)}
+.wh-card-name{font-size:14px;font-weight:600}
+.wh-card-sub{font-size:11px;color:var(--text3);margin-top:1px}
+.wh-card-chevron{font-size:11px;color:var(--text3);transition:transform .2s;flex-shrink:0}
+.wh-card-body{display:none;padding:0 14px 14px;border-top:1px solid var(--border)}
+.wh-card.open .wh-card-body{display:block}
+.wh-card.open .wh-card-chevron{transform:rotate(180deg)}
+.copy-row{display:flex;align-items:center;justify-content:space-between;gap:8px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--r);padding:8px 10px;margin-bottom:6px;cursor:pointer;transition:all .12s}
+.copy-row:hover{border-color:var(--accent);background:var(--accent-bg)}
+.copy-row:hover .copy-hint{opacity:1}
+.copy-row-text{font-size:12px;line-height:1.5;flex:1;word-break:break-all}
+.copy-hint{font-size:10px;color:var(--accent);opacity:0;transition:opacity .12s;white-space:nowrap;font-weight:500}
+@keyframes copyFlash{0%,100%{background:var(--surface2)}50%{background:var(--accent-bg)}}
+.copy-flash{animation:copyFlash .6s ease}
+/* STATUS FLOW */
+.status-flow{display:flex;align-items:center;margin-bottom:14px;overflow-x:auto;padding-bottom:4px}
+.status-step{display:flex;flex-direction:column;align-items:center;gap:4px;min-width:76px;cursor:pointer}
+.status-step .dot{width:26px;height:26px;border-radius:50%;border:2px solid var(--border2);background:var(--surface);display:flex;align-items:center;justify-content:center;font-size:12px;transition:all .15s;z-index:1;position:relative}
+.status-step .dot:hover{border-color:var(--accent)}
+.status-step.done .dot{background:var(--accent);border-color:var(--accent);color:#fff}
+.status-step.current .dot{border-color:var(--accent);box-shadow:0 0 0 3px rgba(45,90,39,.15);background:var(--accent-bg)}
+.status-step .slabel{font-size:10px;color:var(--text3);text-align:center;white-space:nowrap}
+.status-step.done .slabel,.status-step.current .slabel{color:var(--accent);font-weight:500}
+.status-line{flex:1;height:2px;background:var(--border);margin-top:-16px;min-width:12px}
+.status-line.done{background:var(--accent)}
+/* PARCEL CARD */
+.parcel-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:16px;margin-bottom:10px;box-shadow:var(--shadow);transition:border-color .12s}
+.parcel-card:hover{border-color:var(--border2)}
+.parcel-card.status-done{opacity:.65}
+.parcel-card-head{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:10px}
+.parcel-fields{display:grid;grid-template-columns:repeat(auto-fill,minmax(155px,1fr));gap:8px;margin-bottom:8px}
+.pf{display:flex;flex-direction:column;gap:2px}
+.pf-label{font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.05em}
+.pf-val{font-size:13px}.pf-val.mono{font-family:'DM Mono',monospace;font-size:12px}
+/* FILTER */
+.status-filter-row{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px}
+.sfilter{padding:5px 12px;border-radius:999px;border:1px solid var(--border);background:var(--surface);font-size:12px;cursor:pointer;font-family:'Noto Sans TC',sans-serif;color:var(--text2);transition:all .12s}
+.sfilter:hover{border-color:var(--border2);background:var(--surface2)}
+.sfilter.active{background:var(--accent);color:#fff;border-color:var(--accent)}
+/* ITEM ROWS */
+.item-row{display:grid;grid-template-columns:1fr 64px 110px 26px;gap:6px;align-items:center;background:var(--surface2);border-radius:var(--r);padding:7px 8px}
+.item-row input{padding:5px 8px;border:1px solid var(--border2);border-radius:var(--r);font-size:13px;font-family:'Noto Sans TC',sans-serif;background:var(--surface);color:var(--text);width:100%}
+.item-row input:focus{outline:none;border-color:var(--accent)}
+.item-row input.price{font-family:'DM Mono',monospace;text-align:right}
+.item-rm{width:24px;height:24px;border:none;background:none;cursor:pointer;color:var(--text3);font-size:16px;line-height:1;display:flex;align-items:center;justify-content:center;border-radius:var(--r)}
+.item-rm:hover{background:var(--danger-bg);color:var(--danger)}
+/* RATES */
+.rate-hist-row{display:flex;align-items:center;gap:10px;padding:8px 12px;background:var(--surface2);border-radius:var(--r);margin-bottom:6px;font-size:13px;flex-wrap:wrap}
+.rate-hist-row .rdate{font-size:11px;color:var(--text3);min-width:80px;flex-shrink:0}
+.rate-hist-row .rvals{flex:1;display:flex;gap:12px;flex-wrap:wrap}
+.rate-hist-row .rval{font-family:'DM Mono',monospace;font-size:12px;color:var(--text2)}
+.rate-hist-row .rval b{color:var(--text);font-weight:600}
+/* SPLIT RECORD */
+.split-record{background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);margin-bottom:10px;box-shadow:var(--shadow);overflow:hidden}
+.split-record-head{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;cursor:pointer;user-select:none;transition:background .12s}
+.split-record-head:hover{background:var(--surface2)}
+.split-record-body{display:none;padding:0 16px 14px}
+.split-record.open .split-record-body{display:block}
+.split-record-chevron{font-size:11px;color:var(--text3);transition:transform .2s;flex-shrink:0}
+.split-record.open .split-record-chevron{transform:rotate(180deg)}
+.person-total-row{display:flex;justify-content:space-between;align-items:center;padding:6px 10px;border-radius:var(--r);margin-bottom:4px;background:var(--surface2)}
+.person-total-row .pname{font-weight:500}
+.person-total-row .pamts{font-size:12px;color:var(--text2);text-align:right}
+/* TRACKING */
+.tracking-chip{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:999px;font-size:12px;font-family:'DM Mono',monospace}
+.tracking-chip.has{background:var(--ok-bg);color:var(--ok)}
+.tracking-chip.empty{background:var(--warn-bg);color:var(--warn);cursor:pointer}
+.tracking-chip.empty:hover{background:var(--warn);color:#fff}
+/* MISC */
+.empty-state{text-align:center;padding:48px 20px;color:var(--text3)}
+.empty-state .emoji{font-size:36px;margin-bottom:12px}
+.empty-state p{font-size:14px;margin-bottom:4px;color:var(--text2)}
+.empty-state small{font-size:12px;color:var(--text3)}
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(80px);background:var(--text);color:#fff;padding:10px 18px;border-radius:999px;font-size:13px;z-index:9999;transition:transform .25s ease;pointer-events:none;white-space:nowrap}
+.toast.show{transform:translateX(-50%) translateY(0)}
+.tag-chip{display:inline-flex;align-items:center;gap:4px;background:var(--surface2);border:1px solid var(--border);border-radius:999px;padding:3px 8px;font-size:12px;margin:2px}
+.divider{height:1px;background:var(--border);margin:14px 0}
+.info-pill-row{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px}
+.info-pill{font-size:12px;color:var(--text2);background:var(--surface2);border:1px solid var(--border);border-radius:999px;padding:3px 10px}
+.info-pill b{color:var(--text);font-weight:500}
+@media(max-width:768px){.stat-grid{grid-template-columns:1fr 1fr}}
+</style>
+</head>
+<body>
+<!-- 登入畫面 -->
+<div id="login-screen" style="display:none;position:fixed;inset:0;background:var(--bg);z-index:999;align-items:center;justify-content:center;padding:24px;overflow-y:auto">
+  <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:32px;width:100%;max-width:380px;box-shadow:var(--shadow-lg)">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:28px">
+      <span style="font-size:28px">📦</span>
+      <div>
+        <div style="font-size:17px;font-weight:700">集運倉管理</div>
+        <div style="font-size:11px;color:var(--text3)">海外購物追蹤系統</div>
+      </div>
+    </div>
+    <div class="field" style="margin-bottom:12px">
+      <label>Email</label>
+      <input type="email" id="login-email" placeholder="your@email.com" onkeydown="if(event.key==='Enter')doLogin()">
+    </div>
+    <div class="field" style="margin-bottom:8px">
+      <label>密碼</label>
+      <input type="password" id="login-pw" placeholder="至少 6 個字元" onkeydown="if(event.key==='Enter')doLogin()">
+    </div>
+    <div id="login-err" style="font-size:12px;color:var(--danger);min-height:18px;margin-bottom:12px"></div>
+    <button class="btn primary" id="login-btn" onclick="doLogin()" style="width:100%;justify-content:center;margin-bottom:8px">登入</button>
+    <button class="btn" onclick="doRegister()" style="width:100%;justify-content:center;font-size:12px;color:var(--text2);margin-bottom:6px">第一次使用？建立帳號</button>
+    <button class="btn ghost" onclick="showForgotPassword()" style="width:100%;justify-content:center;font-size:11px;color:var(--text3)">忘記密碼？</button>
+    <div style="font-size:11px;color:var(--text3);text-align:center;margin-top:10px;line-height:1.6">建立帳號後，你的所有資料會自動雲端同步<br>換裝置登入也能看到同樣的內容</div>
+  </div>
+</div>
+
+<!-- 忘記密碼 modal -->
+<div class="overlay" id="overlay-forgot" style="z-index:1000">
+  <div class="modal" style="max-width:360px">
+    <div class="modal-header">
+      <h3>重設密碼</h3>
+      <button class="modal-close" onclick="closeOverlay('forgot')">✕</button>
+    </div>
+    <p style="font-size:13px;color:var(--text2);margin-bottom:14px">輸入你的 Email，我們會寄一封重設密碼的連結給你。</p>
+    <div class="field" style="margin-bottom:8px">
+      <label>Email</label>
+      <input type="email" id="forgot-email" placeholder="your@email.com">
+    </div>
+    <div id="forgot-msg" style="font-size:12px;min-height:18px;margin-bottom:10px"></div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeOverlay('forgot')">取消</button>
+      <button class="btn primary" onclick="doForgotPassword()">寄出重設信</button>
+    </div>
+  </div>
+</div>
+
+<div class="app-shell" id="app-shell" style="display:none;flex-direction:column;min-height:100vh">
+  <header class="header">
+    <div class="alert-bar" id="alert-bar"></div>
+    <div class="header-top">
+      <div class="header-logo">
+        <span style="font-size:18px">📦</span>
+        <div><h1 id="page-title-header">包裹管理</h1></div>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px">
+        <span id="save-status" style="font-size:11px;color:var(--text3)"></span>
+        <div class="topbar-actions" id="topbar-actions"></div>
+      </div>
+    </div>
+    <!-- 電腦版頂部導覽 -->
+    <nav class="top-nav" id="top-nav">
+      <button class="top-nav-item active" onclick="nav('parcels')" id="tnav-parcels"><span class="icon">📬</span>包裹管理</button>
+      <button class="top-nav-item" onclick="nav('shipments')" id="tnav-shipments"><span class="icon">🚢</span>出貨訂單</button>
+      <button class="top-nav-item" onclick="nav('warehouses')" id="tnav-warehouses"><span class="icon">🏢</span>集運倉與國別</button>
+      <button class="top-nav-item" onclick="nav('rates')" id="tnav-rates"><span class="icon">💱</span>匯率設定</button>
+      <button class="top-nav-item" onclick="nav('split')" id="tnav-split"><span class="icon">👥</span>朋友分帳</button>
+      <div style="flex:1"></div>
+      <button class="top-nav-item" onclick="doLogout()" style="color:var(--text3)"><span class="icon">🚪</span>登出</button>
+    </nav>
+  </header>
+  <div class="main"><div class="content" id="main-content"></div></div>
+  <!-- 底部導覽列 -->
+  <nav class="bottom-nav" id="bottom-nav">
+    <button class="bnav-item active" onclick="nav('parcels')" id="bnav-parcels">
+      <span class="bnav-icon">📬</span><span class="bnav-label">包裹</span>
+    </button>
+    <button class="bnav-item" onclick="nav('shipments')" id="bnav-shipments">
+      <span class="bnav-icon">🚢</span><span class="bnav-label">出貨</span>
+    </button>
+    <button class="bnav-item" onclick="nav('warehouses')" id="bnav-warehouses">
+      <span class="bnav-icon">🏢</span><span class="bnav-label">集運倉</span>
+    </button>
+    <button class="bnav-item" onclick="nav('rates')" id="bnav-rates">
+      <span class="bnav-icon">💱</span><span class="bnav-label">匯率</span>
+    </button>
+    <button class="bnav-item" onclick="nav('split')" id="bnav-split">
+      <span class="bnav-icon">👥</span><span class="bnav-label">分帳</span>
+    </button>
+    <button class="bnav-item" onclick="confirmDialog('確定要登出嗎？','登出').then(ok=>{if(ok)doLogout()})" id="bnav-logout">
+      <span class="bnav-icon">🚪</span><span class="bnav-label">登出</span>
+    </button>  </nav>
+</div>
+
+<!-- MODAL: 包裹 -->
+<div class="overlay" id="overlay-parcel">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 id="parcel-modal-title">新增包裹</h3>
+      <button class="modal-close" onclick="closeOverlay('parcel')">✕</button>
+    </div>
+    <div class="form-row">
+      <div class="field" style="flex:2"><label>包裹名稱（自訂）</label><input type="text" id="p-label" placeholder="e.g. 五月韓國購物"></div>
+      <div class="field"><label>目前狀態</label>
+        <select id="p-status">
+          <option value="ordered">已下單</option>
+          <option value="shipping_to_wh">寄往集運倉</option>
+          <option value="in_wh">已入倉</option>
+          <option value="shipping_to_tw">出貨中</option>
+          <option value="received">已收到 ✓</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="field"><label>集運倉</label>
+        <select id="p-wh-id" onchange="onWhSelect()"><option value="">選擇集運倉</option></select>
+      </div>
+    </div>
+    <div id="p-wh-preview" style="display:none;background:var(--accent-bg);border:1px solid var(--border);border-radius:var(--r);padding:9px 12px;font-size:12px;color:var(--text2);margin-bottom:10px"></div>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
+      <label style="font-size:12px;color:var(--text2);font-weight:500">品項清單</label>
+      <div style="display:flex;align-items:center;gap:8px">
+        <label style="font-size:11px;color:var(--text3)">幣別</label>
+        <select id="p-currency" onchange="recalcItems()" style="padding:4px 8px;border:1px solid var(--border2);border-radius:var(--r);font-size:12px;font-family:'Noto Sans TC',sans-serif;background:var(--surface);color:var(--text)">
+          <option value="">—</option>
+        </select>
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 64px 110px 26px;gap:6px;padding:0 8px;margin-bottom:3px">
+      <span style="font-size:11px;color:var(--text3)">品項名稱</span>
+      <span style="font-size:11px;color:var(--text3);text-align:center">數量</span>
+      <span style="font-size:11px;color:var(--text3);text-align:right">單價</span><span></span>
+    </div>
+    <div id="p-item-list" style="display:flex;flex-direction:column;gap:6px;margin-bottom:8px"></div>
+    <button class="btn sm" onclick="addItemRow()" style="width:100%;justify-content:center;border-style:dashed">＋ 新增品項</button>
+    <div id="p-items-total" style="display:none;margin-top:8px;padding:8px 12px;background:var(--surface2);border-radius:var(--r);display:flex;justify-content:space-between;align-items:center;font-size:13px">
+      <span style="color:var(--text2)">小計</span><span id="p-total-text" style="font-weight:600"></span>
+    </div>
+    <div class="form-row" style="margin-top:10px">
+      <div class="field"><label>對應匯率記錄 <span style="font-weight:400;color:var(--text3)">（選填）</span></label>
+        <select id="p-rate-id"><option value="">使用最新匯率</option></select>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="field"><label>國內貨運碼</label><input type="text" id="p-domestic" placeholder="賣家寄出後填入"></div>
+    </div>
+    <div class="form-row">
+      <div class="field"><label>倉庫單號</label><input type="text" id="p-trackno" placeholder="入倉後集運倉顯示的編號"></div>
+    </div>
+    <div class="form-row">
+      <div class="field"><label>入倉日</label><input type="date" id="p-indate"></div>
+      <div class="field"><label>最晚出倉日</label><input type="date" id="p-deadline"></div>
+    </div>
+    <div class="form-row">
+      <div class="field"><label>備註</label><textarea id="p-note" placeholder="（選填）" style="min-height:52px"></textarea></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeOverlay('parcel')">取消</button>
+      <button class="btn primary" onclick="saveParcel()">儲存</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: 出貨訂單 -->
+<div class="overlay" id="overlay-shipment">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>建立出貨訂單</h3>
+      <button class="modal-close" onclick="closeOverlay('shipment')">✕</button>
+    </div>
+    <div class="form-row">
+      <div class="field" style="flex:2"><label>訂單名稱</label><input type="text" id="s-name" placeholder="e.g. 2024/05 韓國集運"></div>
+      <div class="field"><label>國別</label><select id="s-country"><option value="">選擇</option></select></div>
+    </div>
+    <div class="form-row">
+      <div class="field"><label>預計發貨日</label><input type="date" id="s-shipdate"></div>
+      <div class="field"><label>結帳日</label><input type="date" id="s-paydate"></div>
+    </div>
+    <div class="form-row">
+      <div class="field"><label>幣別</label><select id="s-currency"><option value="">選擇</option></select></div>
+      <div class="field"><label>運費（外幣）</label><input type="number" id="s-freight" value="0" step="1"></div>
+    </div>
+    <div class="form-row">
+      <div class="field"><label>國際貨運單號</label><input type="text" id="s-intltrack" placeholder="可留空之後補填"></div>
+    </div>
+    <div style="margin:6px 0 4px;font-size:12px;color:var(--text2);font-weight:500">選擇包裹</div>
+    <div id="s-parcel-select" style="display:flex;flex-direction:column;gap:6px;max-height:200px;overflow-y:auto;margin:8px 0"></div>
+    <div class="form-row" style="margin-top:8px">
+      <div class="field"><label>備註</label><textarea id="s-note" placeholder="（選填）"></textarea></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeOverlay('shipment')">取消</button>
+      <button class="btn primary" onclick="saveShipment()">建立訂單</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: 集運倉 -->
+<div class="overlay" id="overlay-warehouse">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 id="wh-modal-title">新增集運倉</h3>
+      <button class="modal-close" onclick="closeOverlay('warehouse')">✕</button>
+    </div>
+    <div class="form-row">
+      <div class="field" style="flex:2"><label>集運倉名稱</label><input type="text" id="wh-name" placeholder="e.g. Bigato 韓國集運"></div>
+      <div class="field"><label>所屬國別</label><select id="wh-country"><option value="">選擇</option></select></div>
+    </div>
+    <div class="form-row">
+      <div class="field"><label>收件人姓名</label><input type="text" id="wh-recipient" placeholder="Your name in English"></div>
+      <div class="field"><label>幣別</label>
+        <select id="wh-currency">
+          <option value="">選擇</option>
+          <option value="JPY">JPY 日圓</option><option value="KRW">KRW 韓圓</option>
+          <option value="USD">USD 美元</option><option value="GBP">GBP 英鎊</option>
+          <option value="EUR">EUR 歐元</option><option value="CNY">CNY 人民幣</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-row"><div class="field"><label>倉庫地址</label><textarea id="wh-address" placeholder="可貼上韓文/日文地址" style="min-height:80px"></textarea></div></div>
+    <div class="form-row">
+      <div class="field"><label>電話</label><input type="text" id="wh-phone" placeholder="倉庫聯絡電話"></div>
+      <div class="field"><label>郵遞區號</label><input type="text" id="wh-zip" placeholder="ZIP / 우편번호"></div>
+    </div>
+    <div class="form-row">
+      <div class="field"><label>會員代號</label><input type="text" id="wh-member" placeholder="你的會員編號（選填）"></div>
+      <div class="field"><label>官網</label><input type="text" id="wh-url" placeholder="https://"></div>
+    </div>
+    <div class="form-row"><div class="field"><label>備註</label><textarea id="wh-note" placeholder="（選填）"></textarea></div></div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeOverlay('warehouse')">取消</button>
+      <button class="btn primary" onclick="saveWarehouse()">儲存</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: 國別 -->
+<div class="overlay" id="overlay-country">
+  <div class="modal" style="max-width:400px">
+    <div class="modal-header">
+      <h3>新增國別</h3>
+      <button class="modal-close" onclick="closeOverlay('country')">✕</button>
+    </div>
+    <div class="form-row">
+      <div class="field"><label>旗幟 Emoji</label><input type="text" id="c-flag" placeholder="🇺🇸" maxlength="4"></div>
+      <div class="field" style="flex:2"><label>國別名稱</label><input type="text" id="c-name" placeholder="美國"></div>
+    </div>
+    <div class="form-row">
+      <div class="field"><label>幣別代號</label><input type="text" id="c-currency" placeholder="USD" maxlength="5"></div>
+      <div class="field" style="flex:2"><label>幣別名稱</label><input type="text" id="c-currency-name" placeholder="美元"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeOverlay('country')">取消</button>
+      <button class="btn primary" onclick="saveCountry()">新增</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: 貨運單號 -->
+<div class="overlay" id="overlay-tracking">
+  <div class="modal" style="max-width:420px">
+    <div class="modal-header">
+      <h3>更新貨運單號</h3>
+      <button class="modal-close" onclick="closeOverlay('tracking')">✕</button>
+    </div>
+    <div class="field" style="margin-bottom:10px"><label>國際貨運追蹤號碼</label><input type="text" id="track-no" placeholder="輸入後可隨時複製"></div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeOverlay('tracking')">取消</button>
+      <button class="btn primary" onclick="saveTracking()">更新</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: 分帳 -->
+<div class="overlay" id="overlay-split-edit">
+  <div class="modal" style="max-width:620px">
+    <div class="modal-header">
+      <h3 id="split-modal-title">新增分帳紀錄</h3>
+      <button class="modal-close" onclick="closeOverlay('split-edit')">✕</button>
+    </div>
+    <div class="form-row">
+      <div class="field" style="flex:2"><label>標題</label><input type="text" id="se-title" placeholder="e.g. 五月韓國聯購"></div>
+      <div class="field"><label>幣別</label><select id="se-currency" onchange="onSeCurrencyChange()"><option value="">選擇</option></select></div>
+    </div>
+    <div class="form-row">
+      <div class="field"><label>對應匯率記錄</label><select id="se-rate-id"><option value="">最新匯率</option></select></div>
+      <div class="field"><label>從包裹匯入品項</label>
+        <select id="se-import-parcel" onchange="importParcelItems()"><option value="">選擇包裹…</option></select>
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:20px 80px 1fr 64px 110px 26px;gap:6px;padding:0 8px;margin-bottom:3px;margin-top:8px">
+      <span></span>
+      <span style="font-size:11px;color:var(--text3)">歸屬人</span>
+      <span style="font-size:11px;color:var(--text3)">品項</span>
+      <span style="font-size:11px;color:var(--text3);text-align:center">數量</span>
+      <span style="font-size:11px;color:var(--text3);text-align:right">金額</span><span></span>
+    </div>
+    <div id="se-item-list" style="display:flex;flex-direction:column;gap:6px;margin-bottom:8px;max-height:260px;overflow-y:auto"></div>
+    <button class="btn sm" onclick="addSplitItemRow()" style="width:100%;justify-content:center;border-style:dashed">＋ 新增品項</button>
+    <div id="se-preview" style="margin-top:10px"></div>
+    <div class="form-row" style="margin-top:8px">
+      <div class="field"><label>備註</label><textarea id="se-note" placeholder="（選填）" style="min-height:52px"></textarea></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeOverlay('split-edit')">取消</button>
+      <button class="btn sm ghost" onclick="previewSplit()">預覽各人合計</button>
+      <button class="btn primary" onclick="saveSplitRecord()">儲存</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<!-- 確認對話框（取代 confirm()） -->
+<div class="overlay" id="overlay-confirm" style="z-index:300">
+  <div class="modal" style="max-width:360px;padding:28px 24px">
+    <div style="font-size:15px;font-weight:600;margin-bottom:8px" id="confirm-title">確認</div>
+    <div style="font-size:13px;color:var(--text2);margin-bottom:20px" id="confirm-msg">確定嗎？</div>
+    <div style="display:flex;gap:8px;justify-content:flex-end">
+      <button class="btn" onclick="confirmResolve(false)">取消</button>
+      <button class="btn danger" id="confirm-ok-btn" onclick="confirmResolve(true)">確定</button>
+    </div>
+  </div>
+</div>
+
+<!-- 圖片預覽 modal（手機長按儲存） -->
+<div class="overlay" id="overlay-imgpreview" style="z-index:300;align-items:flex-start;overflow-y:auto;padding:16px 0">
+  <div style="background:var(--surface);border-radius:var(--rl);width:92%;max-width:500px;margin:auto;box-shadow:var(--shadow-lg);overflow:hidden">
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid var(--border)">
+      <div>
+        <div style="font-weight:600;font-size:14px">分帳圖片</div>
+        <div style="font-size:11px;color:var(--text3);margin-top:2px" id="imgpreview-hint">📱 長按圖片即可儲存到相簿</div>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center">
+        <a id="imgpreview-dl" download="分帳.png" style="display:none"><button class="btn sm">⬇ 下載</button></a>
+        <button class="btn sm" onclick="closeOverlay('imgpreview')">關閉</button>
+      </div>
+    </div>
+    <div style="padding:16px;background:var(--bg)">
+      <img id="imgpreview-img" style="width:100%;border-radius:var(--r);display:block;box-shadow:var(--shadow)" src="" alt="分帳圖片">
+    </div>
+  </div>
+</div>
+
+<script type="module">
+// ===== FIREBASE =====
+import{initializeApp}from'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
+import{getAuth,signInWithEmailAndPassword,createUserWithEmailAndPassword,signOut,onAuthStateChanged,sendPasswordResetEmail}from'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
+import{getFirestore,doc,getDoc,setDoc}from'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+
+const firebaseConfig={
+  apiKey:'AIzaSyAleSSd64K1IQha0KNoYfANjlaPivLOcrI',
+  authDomain:'my--logi.firebaseapp.com',
+  projectId:'my--logi',
+  storageBucket:'my--logi.firebasestorage.app',
+  messagingSenderId:'920452447995',
+  appId:'1:920452447995:web:fa4700d9013fd124f03a5e'
+};
+const app=initializeApp(firebaseConfig);
+const auth=getAuth(app);
+const db=getFirestore(app);
+let currentUser=null;
+let saveTimer=null;
+
+// ===== DATA =====
+const DEF={
+  countries:[
+    {id:'JP',name:'日本',flag:'🇯🇵',currency:'JPY',currencyName:'日圓'},
+    {id:'KR',name:'韓國',flag:'🇰🇷',currency:'KRW',currencyName:'韓圓'},
+  ],
+  warehouses:[],parcels:[],shipments:[],
+  rateHistory:[],
+  rates:{JPY:0.218,KRW:0.023,USD:32.5,GBP:41.2,EUR:35.8,CNY:4.5,date:''},
+  splitRecords:[]
+};
+let D=JSON.parse(JSON.stringify(DEF));
+
+// debounced save
+window._save=function(){
+  localStorage.setItem('wms_v3',JSON.stringify(D));
+  clearTimeout(saveTimer);
+  setSaveStatus('saving');
+  saveTimer=setTimeout(()=>saveToCloud(),800);
+};
+
+function setSaveStatus(status){
+  const el=document.getElementById('save-status');
+  if(!el)return;
+  if(status==='saving'){el.textContent='儲存中…';el.style.color='var(--text3)';}
+  else if(status==='saved'){el.textContent='✓ 已同步';el.style.color='var(--ok)';}
+  else if(status==='error'){el.textContent='⚠ 同步失敗';el.style.color='var(--danger)';}
+}
+
+async function saveToCloud(){
+  if(!currentUser){setSaveStatus('error');return;}
+  try{
+    await setDoc(doc(db,'users',currentUser.uid),{data:D,updatedAt:new Date().toISOString()});
+    setSaveStatus('saved');
+  }catch(e){console.error('雲端存檔失敗',e);setSaveStatus('error');}
+}
+
+async function loadFromCloud(){
+  if(!currentUser)return;
+  try{
+    const snap=await getDoc(doc(db,'users',currentUser.uid));
+    if(snap.exists()&&snap.data().data){
+      D=snap.data().data;
+      if(!D.countries)D.countries=DEF.countries;
+      if(!D.rateHistory)D.rateHistory=[];
+      if(!D.splitRecords)D.splitRecords=[];
+      if(!D.rates)D.rates=DEF.rates;
+    }else{
+      const local=localStorage.getItem('wms_v3');
+      if(local){try{D=JSON.parse(local);}catch(e){}await saveToCloud();}
+    }
+  }catch(e){console.error('載入失敗',e);}
+}
+
+// ===== AUTH FUNCTIONS (exposed to window) =====
+window.doLogin=async function(){
+  const email=document.getElementById('login-email').value.trim();
+  const pw=document.getElementById('login-pw').value;
+  const btn=document.getElementById('login-btn');
+  const err=document.getElementById('login-err');
+  if(!email||!pw){err.textContent='請填入 Email 和密碼';return;}
+  btn.textContent='登入中…';btn.disabled=true;err.textContent='';
+  try{
+    await signInWithEmailAndPassword(auth,email,pw);
+  }catch(e){
+    err.textContent=e.code==='auth/invalid-credential'||e.code==='auth/wrong-password'?'Email 或密碼錯誤':e.message;
+    btn.textContent='登入';btn.disabled=false;
+  }
+};
+
+window.doRegister=async function(){
+  const email=document.getElementById('login-email').value.trim();
+  const pw=document.getElementById('login-pw').value;
+  const err=document.getElementById('login-err');
+  if(!email||!pw){err.textContent='請填入 Email 和密碼';return;}
+  if(pw.length<6){err.textContent='密碼至少 6 個字元';return;}
+  try{
+    await createUserWithEmailAndPassword(auth,email,pw);
+    err.style.color='var(--ok)';err.textContent='註冊成功！';
+  }catch(e){
+    err.style.color='var(--danger)';
+    err.textContent=e.code==='auth/email-already-in-use'?'此 Email 已註冊過':e.message;
+  }
+};
+
+window.doForgotPassword=async function(){
+  const email=document.getElementById('forgot-email').value.trim();
+  const msg=document.getElementById('forgot-msg');
+  if(!email){msg.style.color='var(--danger)';msg.textContent='請輸入 Email';return;}
+  msg.style.color='var(--text3)';msg.textContent='寄送中…';
+  try{
+    await sendPasswordResetEmail(auth,email);
+    msg.style.color='var(--ok)';msg.textContent='✓ 已寄出！請檢查信箱點連結重設密碼。';
+  }catch(e){
+    msg.style.color='var(--danger)';msg.textContent='寄送失敗：'+e.message;
+  }
+};
+
+window.doLogout=async function(){
+  currentUser=null;
+  D=JSON.parse(JSON.stringify(DEF));
+  await signOut(auth);
+  showLoginScreen();
+  toast('已登出');
+};
+
+// ===== INIT =====
+onAuthStateChanged(auth,async user=>{
+  if(user){
+    currentUser=user;
+    await loadFromCloud();
+    showAppShell();
+    window.nav('parcels');
+  }else{
+    showLoginScreen();
+  }
+});
+</script>
+
+<script>
+// ===== STATE =====
+let currentPage='parcels';
+let editingWHId=null,editingTrackId=null,editingParcelId=null,editingSplitId=null;
+let selectedParcelIds=[];
+let parcelFilter='active';
+let itemRowId=0,splitItemRowId=0;
+
+// ===== NAV =====
+const PAGE_TITLES={parcels:'包裹管理',shipments:'出貨訂單',warehouses:'集運倉與國別',rates:'匯率設定',split:'朋友分帳'};
+function nav(page){
+  currentPage=page;
+  // 同步底部導覽
+  document.querySelectorAll('.bnav-item').forEach(b=>b.classList.remove('active'));
+  const bBtn=document.getElementById('bnav-'+page);
+  if(bBtn)bBtn.classList.add('active');
+  // 同步頂部導覽
+  document.querySelectorAll('.top-nav-item').forEach(b=>b.classList.remove('active'));
+  const tBtn=document.getElementById('tnav-'+page);
+  if(tBtn)tBtn.classList.add('active');
+  // 更新頁面標題
+  const titleEl=document.getElementById('page-title-header');
+  if(titleEl)titleEl.textContent=PAGE_TITLES[page]||'';
+  ({parcels:renderParcels,shipments:renderShipments,warehouses:renderWarehouses,rates:renderRates,split:renderSplit})[page]?.();
+}
+
+// ===== ALERT BAR =====
+function updateAlertBar(){
+  const bar=document.getElementById('alert-bar');
+  const urgent=D.parcels.filter(p=>{
+    if(p.status==='received'||p.status==='shipping_to_tw')return false;
+    const d=daysLeft(p.deadline);
+    return d!==null&&d<=7;
+  });
+  if(!urgent.length){bar.classList.remove('show');return;}
+  bar.classList.add('show');
+  bar.innerHTML=`<b>⚠ 出倉提醒</b>`+urgent.map(p=>{
+    const d=daysLeft(p.deadline);
+    const name=p.label||p.items||'包裹';
+    return`<span class="alert-chip" onclick="parcelFilter='active';nav('parcels')">${name} — ${d<0?'逾期'+Math.abs(d)+'天':d+'天後到期'}</span>`;
+  }).join('');
+}
+
+// ===== HELPERS =====
+function toast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2200)}
+
+let _confirmResolve=null;
+function confirmDialog(msg,title,okText){
+  return new Promise(resolve=>{
+    _confirmResolve=resolve;
+    document.getElementById('confirm-title').textContent=title||'確認';
+    document.getElementById('confirm-msg').textContent=msg||'確定嗎？';
+    const okBtn=document.getElementById('confirm-ok-btn');
+    okBtn.textContent=okText||'確定';
+    okBtn.className=title==='登出'?'btn':'btn danger';
+    document.getElementById('overlay-confirm').classList.add('open');
+  });
+}
+function confirmResolve(val){
+  document.getElementById('overlay-confirm').classList.remove('open');
+  if(_confirmResolve){_confirmResolve(val);_confirmResolve=null;}
+}
+function openOverlay(id){document.getElementById('overlay-'+id).classList.add('open')}
+function closeOverlay(id){document.getElementById('overlay-'+id).classList.remove('open')}
+function getCountry(id){return D.countries.find(c=>c.id===id)}
+function daysLeft(d){if(!d)return null;return Math.ceil((new Date(d)-new Date())/86400000)}
+function deadlineBadge(d){
+  if(!d)return'';const n=daysLeft(d);
+  if(n<0)return`<span class="badge badge-danger">逾期${Math.abs(n)}天</span>`;
+  if(n<=3)return`<span class="badge badge-danger">${n}天到期</span>`;
+  if(n<=7)return`<span class="badge badge-warn">${n}天</span>`;
+  return`<span class="badge badge-ok">${n}天</span>`;
+}
+function copyText(text,el){
+  navigator.clipboard.writeText(text).then(()=>{toast('已複製！');if(el){el.classList.add('copy-flash');setTimeout(()=>el.classList.remove('copy-flash'),700);}})
+  .catch(()=>{const ta=document.createElement('textarea');ta.value=text;document.body.appendChild(ta);ta.select();document.execCommand('copy');document.body.removeChild(ta);toast('已複製！');});
+}
+function makeCopyRow(text,label){
+  const esc=text.replace(/\\/g,'\\\\').replace(/'/g,"\\'").replace(/\n/g,'\\n');
+  return`<div class="copy-row" onclick="copyText('${esc}',this)"><div class="copy-row-text">${text.replace(/\n/g,'<br>')}</div><span class="copy-hint">點擊複製</span></div>`;
+}
+function populateCountrySelects(){
+  const opts=`<option value="">選擇國別</option>`+D.countries.map(c=>`<option value="${c.id}">${c.flag} ${c.name}</option>`).join('');
+  ['s-country','wh-country'].forEach(id=>{const el=document.getElementById(id);if(el){const v=el.value;el.innerHTML=opts;if(v)el.value=v;}});
+}
+function fillCurrencySelect(selId){
+  const seen=new Set();
+  const opts=`<option value="">— 不指定 —</option>`+D.countries.filter(c=>{if(seen.has(c.currency))return false;seen.add(c.currency);return true;}).map(c=>`<option value="${c.currency}">${c.currency} ${c.currencyName}</option>`).join('');
+  const el=document.getElementById(selId);if(!el)return;const v=el.value;el.innerHTML=opts;if(v)el.value=v;
+}
+function getRate(currency,rateId){
+  if(!currency)return 0;
+  if(rateId){const r=D.rateHistory.find(x=>x.id==rateId);if(r&&r.rates[currency])return r.rates[currency];}
+  if(D.rateHistory.length){
+    const sorted=[...D.rateHistory].sort((a,b)=>b.date.localeCompare(a.date));
+    for(const r of sorted){if(r.rates[currency])return r.rates[currency];}
+  }
+  return D.rates[currency]||0;
+}
+function populateRateSelect(selId,currency){
+  const el=document.getElementById(selId);if(!el)return;
+  const v=el.value;
+  const opts=D.rateHistory
+    .filter(r=>!currency||r.rates[currency])
+    .sort((a,b)=>b.date.localeCompare(a.date))
+    .map(r=>`<option value="${r.id}">${r.date}${r.note?' · '+r.note:''} (1${currency?currency:''}=${r.rates[currency]||'?'})</option>`).join('');
+  el.innerHTML=`<option value="">使用最新匯率</option>`+opts;
+  if(v)el.value=v;
+}
+
+// ===== STATUSES =====
+const STATUSES=[
+  {key:'ordered',label:'已下單',icon:'🛒'},
+  {key:'shipping_to_wh',label:'寄往集運倉',icon:'✈️'},
+  {key:'in_wh',label:'已入倉',icon:'🏢'},
+  {key:'shipping_to_tw',label:'出貨中',icon:'🚢'},
+  {key:'received',label:'已收到',icon:'✓'},
+];
+const STATUS_IDX=Object.fromEntries(STATUSES.map((s,i)=>[s.key,i]));
+
+// ===== PARCELS =====
+function renderParcels(){
+  document.getElementById('topbar-actions').innerHTML='';
+  const addBtn=`<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+    <h2 style="font-size:16px;font-weight:600">包裹管理</h2>
+    <button class="btn primary" onclick="openAddParcel()">＋ 新增包裹</button>
+  </div>`;
+  updateAlertBar();
+  const all=D.parcels;
+  const active=all.filter(p=>p.status!=='received');
+  const received=all.filter(p=>p.status==='received');
+  const urgent=active.filter(p=>{const d=daysLeft(p.deadline);return d!==null&&d<=7&&p.status==='in_wh';}).length;
+  const statsHtml=`<div class="stat-grid">
+    <div class="stat-card"><div class="s-label">追蹤中</div><div class="s-val">${active.length}</div><div class="s-sub">進行中</div></div>
+    <div class="stat-card"><div class="s-label">已完結</div><div class="s-val">${received.length}</div></div>
+    <div class="stat-card" style="${urgent>0?'border-color:var(--warn);background:var(--warn-bg)':''}">
+      <div class="s-label">⚠ 即將到期</div><div class="s-val" style="${urgent>0?'color:var(--warn)':''}">${urgent}</div><div class="s-sub">在倉7天內</div></div>
+    <div class="stat-card"><div class="s-label">全部包裹</div><div class="s-val">${all.length}</div></div>
+  </div>`;
+  const filterHtml=`<div class="status-filter-row">
+    <button class="sfilter ${parcelFilter==='active'?'active':''}" onclick="parcelFilter='active';renderParcels()">全部進行中 (${active.length})</button>
+    <button class="sfilter ${parcelFilter==='ordered'?'active':''}" onclick="parcelFilter='ordered';renderParcels()">🛒 已下單 (${all.filter(p=>p.status==='ordered').length})</button>
+    <button class="sfilter ${parcelFilter==='shipping_to_wh'?'active':''}" onclick="parcelFilter='shipping_to_wh';renderParcels()">✈️ 寄往集運倉 (${all.filter(p=>p.status==='shipping_to_wh').length})</button>
+    <button class="sfilter ${parcelFilter==='in_wh'?'active':''}" onclick="parcelFilter='in_wh';renderParcels()">🏢 已入倉 (${all.filter(p=>p.status==='in_wh').length})</button>
+    <button class="sfilter ${parcelFilter==='shipping_to_tw'?'active':''}" onclick="parcelFilter='shipping_to_tw';renderParcels()">🚢 出貨中 (${all.filter(p=>p.status==='shipping_to_tw').length})</button>
+    <button class="sfilter ${parcelFilter==='received'?'active':''}" onclick="parcelFilter='received';renderParcels()">✓ 已收到 (${received.length})</button>
+    <button class="sfilter ${parcelFilter==='all'?'active':''}" onclick="parcelFilter='all';renderParcels()">全部 (${all.length})</button>
+  </div>`;
+  const singleStatuses=['ordered','shipping_to_wh','in_wh','shipping_to_tw','received'];
+  let shown=parcelFilter==='active'?active:parcelFilter==='received'?received:parcelFilter==='all'?all:singleStatuses.includes(parcelFilter)?all.filter(p=>p.status===parcelFilter):active;
+  let cardsHtml='';
+  if(!shown.length){
+    cardsHtml=`<div class="empty-state"><div class="emoji">📭</div><p>${parcelFilter==='received'?'還沒有完結的包裹':parcelFilter==='all'?'還沒有任何包裹':parcelFilter==='active'?'目前沒有進行中的包裹':'這個狀態目前沒有包裹'}</p><small>點右上角「新增包裹」開始記錄</small></div>`;
+  }else{
+    shown.forEach(p=>{
+      const wh=D.warehouses.find(w=>w.id===p.whId);
+      const c=wh?getCountry(wh.country):null;
+      const si=STATUS_IDX[p.status]??0;
+      const rate=getRate(p.currency,p.rateId);
+      const lineItems=p.lineItems&&p.lineItems.length?p.lineItems:(p.items?[{name:p.items,qty:p.qty||1,price:0}]:[]);
+      const total=lineItems.reduce((s,r)=>s+r.qty*(r.price||0),0);
+      const hasPrice=lineItems.some(r=>r.price>0);
+      const displayName=p.label||(lineItems.map(r=>r.name).filter(Boolean).join('、'))||'包裹 #'+p.id;
+      // flow bar
+      let flowHtml='<div class="status-flow">';
+      STATUSES.forEach((s,i)=>{
+        const cls=i<si?'done':i===si?'current':'';
+        flowHtml+=`<div class="status-step ${cls}" onclick="setParcelStatus(${p.id},'${s.key}')" title="${s.label}"><div class="dot">${i<=si?s.icon:'·'}</div><div class="slabel">${s.label}</div></div>`;
+        if(i<STATUSES.length-1)flowHtml+=`<div class="status-line ${i<si?'done':''}"></div>`;
+      });
+      flowHtml+='</div>';
+      // items table
+      let itemsHtml='';
+      if(lineItems.length){
+        itemsHtml=`<div style="margin-bottom:10px"><table style="width:100%;font-size:12px;border-collapse:collapse"><thead><tr>
+          <th style="text-align:left;padding:4px 8px;color:var(--text3);font-weight:500;border-bottom:1px solid var(--border);font-size:11px">品項</th>
+          <th style="text-align:center;padding:4px 8px;color:var(--text3);font-weight:500;border-bottom:1px solid var(--border);font-size:11px;width:44px">數量</th>
+          ${hasPrice?`<th style="text-align:right;padding:4px 8px;color:var(--text3);font-weight:500;border-bottom:1px solid var(--border);font-size:11px;width:90px">單價</th>
+          <th style="text-align:right;padding:4px 8px;color:var(--text3);font-weight:500;border-bottom:1px solid var(--border);font-size:11px;width:90px">小計</th>`:''}
+        </tr></thead><tbody>`;
+        lineItems.forEach(r=>{
+          const sub=r.qty*(r.price||0);
+          itemsHtml+=`<tr><td style="padding:5px 8px;border-bottom:1px solid var(--border)">${r.name||'—'}</td>
+            <td style="padding:5px 8px;border-bottom:1px solid var(--border);text-align:center;color:var(--text2)">×${r.qty}</td>
+            ${hasPrice?`<td style="padding:5px 8px;border-bottom:1px solid var(--border);text-align:right;font-family:'DM Mono',monospace">${r.price?r.price.toLocaleString():''}</td>
+            <td style="padding:5px 8px;border-bottom:1px solid var(--border);text-align:right;font-family:'DM Mono',monospace">${sub?sub.toLocaleString():''}</td>`:''}
+          </tr>`;
+        });
+        if(hasPrice&&total>0){
+          const twdStr=rate?` ≈ <span style="color:var(--text3)">NT$ ${Math.round(total*rate).toLocaleString()}</span>`:'';
+          const rateRec=p.rateId?D.rateHistory.find(x=>x.id==p.rateId):null;
+          const rateLabel=rateRec?rateRec.date:'最新';
+          itemsHtml+=`<tr><td colspan="2" style="padding:6px 8px"></td>
+            <td style="padding:6px 8px;font-size:11px;color:var(--text3);text-align:right">合計</td>
+            <td style="padding:6px 8px;font-weight:600;text-align:right;font-family:'DM Mono',monospace">
+              ${total.toLocaleString()} ${p.currency||''}${twdStr}
+              ${rate?`<div style="font-size:10px;color:var(--text3);font-weight:400">匯率 ${rate} (${rateLabel})</div>`:''}
+            </td></tr>`;
+        }
+        itemsHtml+=`</tbody></table></div>`;
+      }
+      // meta
+      const metas=[];
+      if(wh)metas.push({label:'集運倉',val:`${c?c.flag+' ':''}<b>${wh.name}</b>`});
+      if(p.domestic)metas.push({label:'國內貨運碼',val:p.domestic,mono:true,copy:p.domestic});
+      if(p.trackno)metas.push({label:'倉庫單號',val:p.trackno,mono:true,copy:p.trackno});
+      if(p.indate)metas.push({label:'入倉日',val:p.indate});
+      if(p.deadline)metas.push({label:'最晚出倉',val:`${p.deadline} ${deadlineBadge(p.deadline)}`});
+      let metaHtml=`<div class="parcel-fields">`;
+      metas.forEach(f=>{
+        const copyBtn=f.copy?` <button class="btn xs ghost" onclick="copyText('${f.copy.replace(/'/g,"\\'")}')">複製</button>`:'';
+        metaHtml+=`<div class="pf"><div class="pf-label">${f.label}</div><div class="pf-val${f.mono?' mono':''}">${f.val}${copyBtn}</div></div>`;
+      });
+      metaHtml+=`</div>`;
+      cardsHtml+=`<div class="parcel-card${p.status==='received'?' status-done':''}">
+        <div class="parcel-card-head">
+          <div style="font-weight:600;font-size:14px">${displayName}</div>
+          <div style="display:flex;gap:6px">
+            <button class="btn xs ghost" onclick="openEditParcel(${p.id})">編輯</button>
+            <button class="btn xs danger" onclick="deleteParcel(${p.id})">刪除</button>
+          </div>
+        </div>
+        ${flowHtml}${itemsHtml}${metaHtml}
+        ${p.note?`<div style="font-size:12px;color:var(--text3);margin-top:4px">📝 ${p.note}</div>`:''}
+      </div>`;
+    });
+  }
+  document.getElementById('main-content').innerHTML=addBtn+statsHtml+filterHtml+cardsHtml;
+}
+
+function setParcelStatus(id,status){
+  const p=D.parcels.find(x=>x.id===id);if(!p)return;
+  p.status=status;
+  if(status==='in_wh'&&!p.indate)p.indate=new Date().toISOString().slice(0,10);
+  window._save();renderParcels();
+  toast('已更新：'+(STATUSES.find(x=>x.key===status)?.label||status));
+}
+
+function _fillWhSelect(){
+  const sel=document.getElementById('p-wh-id');
+  sel.innerHTML=`<option value="">選擇集運倉</option>`+D.warehouses.map(w=>{const c=getCountry(w.country);return`<option value="${w.id}">${c?c.flag+' ':''}${w.name}</option>`;}).join('');
+}
+
+function openAddParcel(){
+  editingParcelId=null;
+  document.getElementById('parcel-modal-title').textContent='新增包裹';
+  _fillWhSelect();fillCurrencySelect('p-currency');populateRateSelect('p-rate-id','');
+  ['p-label','p-trackno','p-domestic','p-note'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('p-indate').value='';document.getElementById('p-deadline').value='';
+  document.getElementById('p-status').value='ordered';
+  document.getElementById('p-wh-preview').style.display='none';
+  document.getElementById('p-item-list').innerHTML='';
+  document.getElementById('p-items-total').style.display='none';
+  addItemRow();
+  openOverlay('parcel');
+}
+
+function openEditParcel(id){
+  const p=D.parcels.find(x=>x.id===id);if(!p)return;
+  editingParcelId=id;
+  document.getElementById('parcel-modal-title').textContent='編輯包裹';
+  _fillWhSelect();fillCurrencySelect('p-currency');
+  document.getElementById('p-wh-id').value=p.whId||'';onWhSelect();
+  document.getElementById('p-currency').value=p.currency||'';
+  populateRateSelect('p-rate-id',p.currency||'');
+  document.getElementById('p-rate-id').value=p.rateId||'';
+  document.getElementById('p-label').value=p.label||'';
+  document.getElementById('p-status').value=p.status||'ordered';
+  document.getElementById('p-trackno').value=p.trackno||'';
+  document.getElementById('p-domestic').value=p.domestic||'';
+  document.getElementById('p-indate').value=p.indate||'';
+  document.getElementById('p-deadline').value=p.deadline||'';
+  document.getElementById('p-note').value=p.note||'';
+  document.getElementById('p-item-list').innerHTML='';
+  const rows=p.lineItems&&p.lineItems.length?p.lineItems:[{name:p.items||'',qty:p.qty||1,price:''}];
+  rows.forEach(r=>addItemRow(r));
+  recalcItems();
+  openOverlay('parcel');
+}
+
+function onWhSelect(){
+  const id=parseInt(document.getElementById('p-wh-id').value);
+  const prev=document.getElementById('p-wh-preview');
+  if(!id){prev.style.display='none';return;}
+  const wh=D.warehouses.find(w=>w.id===id);if(!wh){prev.style.display='none';return;}
+  const c=getCountry(wh.country);
+  if(c&&c.currency){document.getElementById('p-currency').value=c.currency;populateRateSelect('p-rate-id',c.currency);}
+  const lines=[];
+  if(wh.recipient)lines.push(`收件人：${wh.recipient}`);
+  if(wh.address)lines.push(`地址：${wh.address.replace(/\n/g,' ')}`);
+  if(wh.phone)lines.push(`電話：${wh.phone}`);
+  if(wh.member)lines.push(`會員：${wh.member}`);
+  prev.innerHTML=`<b>${c?c.flag+' ':''}${wh.name}</b>　<span style="color:var(--text3)">${lines.join('　')}</span>`;
+  prev.style.display='block';recalcItems();
+}
+
+function addItemRow(data){
+  const rid='ir'+(++itemRowId);
+  const div=document.createElement('div');div.className='item-row';div.id=rid;
+  div.innerHTML=`<input type="text" placeholder="品項名稱" value="${data?.name||''}" oninput="recalcItems()">
+    <input type="number" placeholder="數量" value="${data?.qty||1}" min="1" step="1" oninput="recalcItems()">
+    <input type="number" class="price" placeholder="單價" value="${data?.price||''}" min="0" step="1" oninput="recalcItems()">
+    <button class="item-rm" onclick="document.getElementById('${rid}').remove();recalcItems()">×</button>`;
+  document.getElementById('p-item-list').appendChild(div);recalcItems();
+}
+function getItemRows(){
+  return[...document.getElementById('p-item-list').querySelectorAll('.item-row')].map(row=>{
+    const ins=row.querySelectorAll('input');
+    return{name:ins[0].value.trim(),qty:parseFloat(ins[1].value)||1,price:parseFloat(ins[2].value)||0};
+  });
+}
+function recalcItems(){
+  const rows=getItemRows();
+  const cur=document.getElementById('p-currency').value;
+  const rateId=document.getElementById('p-rate-id')?.value||'';
+  const rate=getRate(cur,rateId);
+  const total=rows.reduce((s,r)=>s+r.qty*r.price,0);
+  const el=document.getElementById('p-items-total'),tx=document.getElementById('p-total-text');
+  if(rows.some(r=>r.price>0)&&total>0){
+    let t=`${total.toLocaleString()} ${cur||''}`;
+    if(rate)t+=` ≈ NT$ ${Math.round(total*rate).toLocaleString()}`;
+    tx.textContent=t;el.style.display='flex';
+  }else{el.style.display='none';}
+}
+
+function saveParcel(){
+  const whId=parseInt(document.getElementById('p-wh-id').value)||null;
+  const wh=whId?D.warehouses.find(w=>w.id===whId):null;
+  const lineItems=getItemRows().filter(r=>r.name||r.price);
+  if(!lineItems.length){toast('請至少新增一個品項');return}
+  const p={
+    id:editingParcelId||Date.now(),whId,country:wh?.country||null,warehouse:wh?.name||'',
+    label:document.getElementById('p-label').value.trim(),
+    status:document.getElementById('p-status').value||'ordered',
+    currency:document.getElementById('p-currency').value||'',
+    rateId:document.getElementById('p-rate-id').value||null,
+    lineItems,
+    items:lineItems.map(r=>r.name+(r.qty>1?'×'+r.qty:'')).filter(Boolean).join('、'),
+    qty:lineItems.reduce((s,r)=>s+r.qty,0),
+    trackno:document.getElementById('p-trackno').value.trim(),
+    domestic:document.getElementById('p-domestic').value.trim(),
+    indate:document.getElementById('p-indate').value,
+    deadline:document.getElementById('p-deadline').value,
+    note:document.getElementById('p-note').value.trim(),shipped:false
+  };
+  if(editingParcelId){D.parcels=D.parcels.map(x=>x.id===editingParcelId?p:x);}else{D.parcels.push(p);}
+  window._save();closeOverlay('parcel');renderParcels();toast(editingParcelId?'包裹已更新':'包裹已新增');
+}
+function deleteParcel(id){confirmDialog('確定刪除此包裹？').then(ok=>{if(!ok)return;D.parcels=D.parcels.filter(p=>p.id!==id);window._window._save();renderParcels();});}
+function onParcelCountryChange(){}
+function onWarehouseSelect(){}
+
+// ===== SHIPMENTS =====
+function renderShipments(){
+  document.getElementById('topbar-actions').innerHTML='';
+  const addBtn=`<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+    <h2 style="font-size:16px;font-weight:600">出貨訂單</h2>
+    <button class="btn primary" onclick="openAddShipment()">＋ 建立出貨訂單</button>
+  </div>`;
+  if(!D.shipments.length){document.getElementById('main-content').innerHTML=addBtn+`<div class="empty-state"><div class="emoji">🚢</div><p>還沒有出貨訂單</p></div>`;return;}
+  let html='';
+  [...D.shipments].reverse().forEach(s=>{
+    const c=getCountry(s.country);
+    const rate=getRate(s.currency,null);
+    const freightTWD=s.freight&&rate?Math.round(s.freight*rate):null;
+    const parcels=D.parcels.filter(p=>s.parcelIds.includes(p.id));
+    const shipdiff=s.shipdate?daysLeft(s.shipdate):null;
+    const hasTrack=s.intltrack&&s.intltrack.trim();
+    let allItems=[];
+    parcels.forEach(p=>{
+      const items=p.lineItems&&p.lineItems.length?p.lineItems:(p.items?[{name:p.items,qty:p.qty||1,price:0}]:[]);
+      items.forEach(it=>allItems.push({...it,parcelLabel:p.label||p.items||''}));
+    });
+    const grandTotal=allItems.reduce((ss,r)=>ss+r.qty*(r.price||0),0);
+    const hasPrice=allItems.some(r=>r.price>0);
+    let itemsHtml='';
+    if(allItems.length){
+      itemsHtml=`<div style="margin-bottom:10px"><table style="width:100%;font-size:12px;border-collapse:collapse"><thead><tr>
+        <th style="text-align:left;padding:4px 8px;color:var(--text3);font-size:11px;border-bottom:1px solid var(--border)">品項</th>
+        <th style="text-align:center;padding:4px 8px;color:var(--text3);font-size:11px;border-bottom:1px solid var(--border);width:44px">數量</th>
+        ${hasPrice?`<th style="text-align:right;padding:4px 8px;color:var(--text3);font-size:11px;border-bottom:1px solid var(--border);width:110px">金額</th>`:''}
+      </tr></thead><tbody>`;
+      allItems.forEach(r=>{
+        itemsHtml+=`<tr>
+          <td style="padding:5px 8px;border-bottom:1px solid var(--border)">${r.name||'—'}<span style="font-size:10px;color:var(--text3);margin-left:6px">${r.parcelLabel}</span></td>
+          <td style="padding:5px 8px;border-bottom:1px solid var(--border);text-align:center;color:var(--text2)">×${r.qty}</td>
+          ${hasPrice?`<td style="padding:5px 8px;border-bottom:1px solid var(--border);text-align:right;font-family:'DM Mono',monospace">${r.price?(r.qty*r.price).toLocaleString():''}</td>`:''}
+        </tr>`;
+      });
+      if(hasPrice&&grandTotal>0){
+        const twdStr=rate?` ≈ NT$ ${Math.round(grandTotal*rate).toLocaleString()}`:'';
+        itemsHtml+=`<tr><td colspan="${hasPrice?2:2}" style="padding:6px 8px"></td>
+          <td style="padding:6px 8px;font-weight:600;text-align:right;font-family:'DM Mono',monospace">${grandTotal.toLocaleString()} ${s.currency||''}${twdStr}</td>
+        </tr>`;
+      }
+      itemsHtml+=`</tbody></table></div>`;
+    }
+    html+=`<div class="card">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:10px">
+        <div><span style="font-size:15px;font-weight:600">${s.name}</span>${c?`<span class="badge badge-country" style="margin-left:8px">${c.flag} ${c.name}</span>`:''}</div>
+        <button class="btn xs danger" onclick="deleteShipment(${s.id})">刪除</button>
+      </div>
+      <div class="info-pill-row">
+        <span class="info-pill">建立 <b>${s.createdAt||'—'}</b></span>
+        <span class="info-pill">預計發貨 <b>${s.shipdate||'未定'}</b>${shipdiff!==null?` <span class="badge ${shipdiff<0?'badge-danger':shipdiff<=14?'badge-warn':'badge-gray'}">${shipdiff<0?'已過期':'還有'+shipdiff+'天'}</span>`:''}</span>
+        ${s.freight?`<span class="info-pill">運費 <b>${s.freight.toLocaleString()} ${s.currency}</b>${freightTWD?' ≈ NT$'+freightTWD.toLocaleString():''}</span>`:''}
+        ${s.paydate?`<span class="info-pill">結帳日 <b>${s.paydate}</b></span>`:''}
+      </div>
+      <div style="margin-bottom:10px">${parcels.map(p=>`<span class="tag-chip">${p.label||p.items||p.trackno||'包裹'}</span>`).join('')||'<span style="color:var(--text3);font-size:12px">無關聯包裹</span>'}</div>
+      ${itemsHtml}
+      <div style="display:flex;align-items:center;gap:10px;margin-top:4px">
+        <span style="font-size:12px;color:var(--text2)">國際貨運：</span>
+        ${hasTrack?`<span class="tracking-chip has">${s.intltrack}</span><button class="btn xs ghost" onclick="copyText('${s.intltrack}')">複製</button>`:
+        `<span class="tracking-chip empty" onclick="openTrackingModal(${s.id})">⚠ 點此填入貨運單號</span>`}
+        ${hasTrack?`<button class="btn xs ghost" onclick="openTrackingModal(${s.id})">更新</button>`:''}
+      </div>
+      ${s.note?`<div style="margin-top:8px;font-size:12px;color:var(--text3)">📝 ${s.note}</div>`:''}
+    </div>`;
+  });
+  document.getElementById('main-content').innerHTML=addBtn+html;
+}
+
+function openAddShipment(){
+  populateCountrySelects();fillCurrencySelect('s-currency');
+  ['s-name','s-shipdate','s-paydate','s-intltrack','s-note'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('s-freight').value=0;
+  selectedParcelIds=[];
+  const avail=D.parcels.filter(p=>p.status==='in_wh'||p.status==='shipping_to_wh'||p.status==='ordered');
+  document.getElementById('s-parcel-select').innerHTML=!avail.length
+    ?'<div style="color:var(--text3);font-size:12px;padding:8px">沒有可選的包裹</div>'
+    :avail.map(p=>{
+      const wh=D.warehouses.find(w=>w.id===p.whId);const c=wh?getCountry(wh.country):null;
+      return`<div style="display:flex;align-items:center;gap:10px;padding:8px 12px;border:1px solid var(--border);border-radius:var(--r);cursor:pointer;transition:all .12s" id="psi-${p.id}" onclick="togglePS(${p.id})">
+        <div style="width:18px;height:18px;border-radius:50%;border:1.5px solid var(--border2);display:flex;align-items:center;justify-content:center;font-size:10px;color:#fff;flex-shrink:0;transition:all .12s" id="chk-${p.id}"></div>
+        <div style="flex:1"><div style="font-size:13px;font-weight:500">${p.label||p.items||'包裹'}</div>
+        <div style="font-size:11px;color:var(--text3)">${c?c.flag+' ':''} ${wh?wh.name:''}</div></div>
+      </div>`;
+    }).join('');
+  openOverlay('shipment');
+}
+function togglePS(id){
+  const el=document.getElementById('psi-'+id),chk=document.getElementById('chk-'+id);
+  if(selectedParcelIds.includes(id)){
+    selectedParcelIds=selectedParcelIds.filter(x=>x!==id);
+    el.style.borderColor='';el.style.background='';chk.style.background='';chk.style.borderColor='';chk.textContent='';
+  }else{
+    selectedParcelIds.push(id);
+    el.style.borderColor='var(--accent)';el.style.background='var(--accent-bg)';
+    chk.style.background='var(--accent)';chk.style.borderColor='var(--accent)';chk.textContent='✓';
+  }
+}
+function saveShipment(){
+  const s={id:Date.now(),name:document.getElementById('s-name').value.trim(),country:document.getElementById('s-country').value,shipdate:document.getElementById('s-shipdate').value,paydate:document.getElementById('s-paydate').value,currency:document.getElementById('s-currency').value,freight:parseFloat(document.getElementById('s-freight').value)||0,intltrack:document.getElementById('s-intltrack').value.trim(),note:document.getElementById('s-note').value.trim(),parcelIds:[...selectedParcelIds],createdAt:new Date().toISOString().slice(0,10)};
+  if(!s.name){toast('請輸入訂單名稱');return}
+  D.parcels.forEach(p=>{if(selectedParcelIds.includes(p.id))p.status='shipping_to_tw';});
+  D.shipments.push(s);window._window._save();closeOverlay('shipment');renderShipments();toast('出貨訂單已建立');
+}
+function deleteShipment(id){
+  confirmDialog('刪除訂單後，關聯包裹狀態將還原為在倉。','確認刪除訂單').then(ok=>{
+    if(!ok)return;
+    const s=D.shipments.find(x=>x.id===id);
+    if(s)D.parcels.forEach(p=>{if(s.parcelIds.includes(p.id))p.status='in_wh';});
+    D.shipments=D.shipments.filter(x=>x.id!==id);window._window._save();renderShipments();
+  });
+}
+function openTrackingModal(id){editingTrackId=id;const s=D.shipments.find(x=>x.id===id);document.getElementById('track-no').value=s?.intltrack||'';openOverlay('tracking');}
+function saveTracking(){const s=D.shipments.find(x=>x.id===editingTrackId);if(s){s.intltrack=document.getElementById('track-no').value.trim();window._save();}closeOverlay('tracking');renderShipments();toast('貨運單號已更新');}
+
+// ===== WAREHOUSES + COUNTRIES =====
+function renderWarehouses(){
+  document.getElementById('topbar-actions').innerHTML='';
+  let whHtml='';
+  if(!D.warehouses.length){
+    whHtml=`<div class="empty-state" style="padding:28px 20px"><div class="emoji">🏢</div><p>還沒有集運倉資料</p><small>新增常用集運倉，輕鬆複製地址和電話</small></div>`;
+  }else{
+    whHtml=`<div class="wh-grid">`;
+    D.warehouses.forEach(wh=>{
+      const c=getCountry(wh.country);
+      const bodyParts=[];
+      if(wh.recipient)bodyParts.push({label:'收件人姓名',val:wh.recipient});
+      if(wh.address)bodyParts.push({label:'寄件地址',val:wh.address});
+      if(wh.phone)bodyParts.push({label:'電話',val:wh.phone});
+      if(wh.zip)bodyParts.push({label:'郵遞區號',val:wh.zip});
+      if(wh.member)bodyParts.push({label:'會員代號',val:wh.member});
+      const bodyHtml=bodyParts.map(b=>`<div style="font-size:11px;color:var(--text3);margin:8px 0 3px">${b.label}</div>${makeCopyRow(b.val,b.label)}`).join('')
+        +(wh.url?`<div style="margin-top:8px"><a href="${wh.url}" target="_blank" style="font-size:12px;color:var(--accent);text-decoration:none">🔗 前往官網</a></div>`:'')
+        +(wh.note?`<div style="margin-top:8px;font-size:12px;color:var(--text3);background:var(--bg);padding:8px 10px;border-radius:var(--r)">📝 ${wh.note}</div>`:'');
+      whHtml+=`<div class="wh-card" id="whcard-${wh.id}">
+        <div class="wh-card-head" onclick="toggleWhCard(${wh.id})">
+          <div><div class="wh-card-name">${c?c.flag+' ':''}${wh.name}</div><div class="wh-card-sub">${c?c.name:''}${wh.currency?' · '+wh.currency:''}</div></div>
+          <div style="display:flex;align-items:center;gap:6px">
+            <button class="btn xs ghost" onclick="event.stopPropagation();editWarehouse(${wh.id})">編輯</button>
+            <button class="btn xs danger" onclick="event.stopPropagation();deleteWarehouse(${wh.id})">刪除</button>
+            <span class="wh-card-chevron">▼</span>
+          </div>
+        </div>
+        <div class="wh-card-body">${bodyHtml}</div>
+      </div>`;
+    });
+    whHtml+=`</div>`;
+  }
+  const countryRows=D.countries.map(c=>`<tr>
+    <td style="font-size:20px;width:40px">${c.flag}</td>
+    <td style="font-weight:500">${c.name}</td>
+    <td><span class="badge badge-accent2">${c.currency} ${c.currencyName}</span></td>
+    <td><button class="btn xs danger" onclick="deleteCountry('${c.id}')">刪除</button></td>
+  </tr>`).join('');
+  document.getElementById('main-content').innerHTML=`
+    <div class="section-head"><h2>🏢 集運倉資料庫</h2><button class="btn primary" onclick="openAddWarehouse()">＋ 新增集運倉</button></div>
+    ${whHtml}
+    <div class="section-head" style="margin-top:28px"><h2>🌏 國別管理</h2><button class="btn primary" onclick="openOverlay('country')">＋ 新增國別</button></div>
+    <div class="card"><div class="table-wrap"><table>
+      <thead><tr><th>旗幟</th><th>國別名稱</th><th>幣別</th><th></th></tr></thead>
+      <tbody>${countryRows}</tbody>
+    </table></div></div>`;
+}
+function toggleWhCard(id){document.getElementById('whcard-'+id)?.classList.toggle('open');}
+function openAddWarehouse(){
+  editingWHId=null;populateCountrySelects();
+  ['wh-name','wh-recipient','wh-address','wh-phone','wh-zip','wh-member','wh-url','wh-note'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('wh-modal-title').textContent='新增集運倉';openOverlay('warehouse');
+}
+function editWarehouse(id){
+  const wh=D.warehouses.find(w=>w.id===id);if(!wh)return;
+  editingWHId=id;populateCountrySelects();
+  document.getElementById('wh-name').value=wh.name||'';document.getElementById('wh-country').value=wh.country||'';
+  document.getElementById('wh-currency').value=wh.currency||'';document.getElementById('wh-recipient').value=wh.recipient||'';
+  document.getElementById('wh-address').value=wh.address||'';document.getElementById('wh-phone').value=wh.phone||'';
+  document.getElementById('wh-zip').value=wh.zip||'';document.getElementById('wh-member').value=wh.member||'';
+  document.getElementById('wh-url').value=wh.url||'';document.getElementById('wh-note').value=wh.note||'';
+  document.getElementById('wh-modal-title').textContent='編輯集運倉';openOverlay('warehouse');
+}
+function saveWarehouse(){
+  const wh={id:editingWHId||Date.now(),name:document.getElementById('wh-name').value.trim(),country:document.getElementById('wh-country').value,currency:document.getElementById('wh-currency').value,recipient:document.getElementById('wh-recipient').value.trim(),address:document.getElementById('wh-address').value.trim(),phone:document.getElementById('wh-phone').value.trim(),zip:document.getElementById('wh-zip').value.trim(),member:document.getElementById('wh-member').value.trim(),url:document.getElementById('wh-url').value.trim(),note:document.getElementById('wh-note').value.trim()};
+  if(!wh.name){toast('請輸入集運倉名稱');return}
+  if(editingWHId){D.warehouses=D.warehouses.map(w=>w.id===editingWHId?wh:w);}else{D.warehouses.push(wh);}
+  window._save();closeOverlay('warehouse');renderWarehouses();toast('集運倉資料已儲存');
+}
+function deleteWarehouse(id){confirmDialog('確定刪除此集運倉？').then(ok=>{if(!ok)return;D.warehouses=D.warehouses.filter(w=>w.id!==id);window._window._save();renderWarehouses();});}
+function saveCountry(){
+  const c={id:'C'+Date.now(),flag:document.getElementById('c-flag').value.trim()||'🏳',name:document.getElementById('c-name').value.trim(),currency:document.getElementById('c-currency').value.trim().toUpperCase(),currencyName:document.getElementById('c-currency-name').value.trim()};
+  if(!c.name||!c.currency){toast('請填入國別名稱與幣別代號');return}
+  D.countries.push(c);window._save();
+  ['c-flag','c-name','c-currency','c-currency-name'].forEach(id=>document.getElementById(id).value='');
+  closeOverlay('country');renderWarehouses();toast('國別已新增');
+}
+function deleteCountry(id){
+  confirmDialog('確定刪除此國別？').then(ok=>{
+    if(!ok)return;
+    D.countries=D.countries.filter(c=>c.id!==id);window._window._save();renderWarehouses();
+  });
+}
+
+// ===== RATES (history) =====
+function renderRates(){
+  document.getElementById('topbar-actions').innerHTML='';
+  const seen=new Set();
+  const currencies=D.countries.filter(c=>{if(seen.has(c.currency))return false;seen.add(c.currency);return true;});
+  const curRows=currencies.map(c=>`<div class="form-row">
+    <div class="field" style="max-width:160px"><label>${c.currency} ${c.currencyName}</label></div>
+    <div class="field" style="max-width:180px"><label>1 ${c.currency} = _____ TWD</label>
+      <input type="number" id="rate-${c.currency}" value="${D.rates[c.currency]||''}" step="0.0001" placeholder="e.g. 0.218">
+    </div>
+  </div>`).join('');
+  const histHtml=D.rateHistory.length===0
+    ?`<div style="color:var(--text3);font-size:13px;padding:8px 0">還沒有記錄。</div>`
+    :[...D.rateHistory].sort((a,b)=>b.date.localeCompare(a.date)).map(r=>`
+      <div class="rate-hist-row">
+        <span class="rdate">${r.date}</span>
+        <div class="rvals">${Object.entries(r.rates).map(([k,v])=>`<span class="rval"><b>${k}</b> = ${v}</span>`).join('')}</div>
+        ${r.note?`<span style="font-size:11px;color:var(--text3)">${r.note}</span>`:''}
+        <button class="btn xs danger" onclick="deleteRateRecord('${r.id}')">刪除</button>
+      </div>`).join('');
+  const calcOpts=currencies.map(c=>`<option value="${c.currency}">${c.currency} ${c.currencyName}</option>`).join('');
+  document.getElementById('main-content').innerHTML=`
+    <div class="card">
+      <div style="font-weight:600;margin-bottom:6px">新增匯率記錄</div>
+      <div style="font-size:12px;color:var(--text3);margin-bottom:14px">每次信用卡結帳日可分開記錄，包裹和分帳可選擇對應哪一筆</div>
+      ${curRows}
+      <div class="form-row">
+        <div class="field" style="max-width:180px"><label>結帳日期</label><input type="date" id="rate-date" value="${new Date().toISOString().slice(0,10)}"></div>
+        <div class="field" style="max-width:200px"><label>備註（選填）</label><input type="text" id="rate-note" placeholder="e.g. 五月韓國訂單"></div>
+      </div>
+      <button class="btn primary" onclick="saveRateRecord()">儲存這筆匯率</button>
+    </div>
+    <div class="card">
+      <div style="font-weight:600;margin-bottom:12px">匯率歷史記錄</div>${histHtml}
+    </div>
+    <div class="card">
+      <div style="font-weight:600;margin-bottom:12px">快速換算</div>
+      <div class="form-row">
+        <div class="field"><label>幣別</label><select id="calc-cur">${calcOpts}</select></div>
+        <div class="field"><label>金額</label><input type="number" id="calc-amt" placeholder="輸入金額" oninput="doCalc()"></div>
+        <div class="field"><label>台幣（約）</label><input type="text" id="calc-result" readonly></div>
+      </div>
+    </div>`;
+}
+function saveRateRecord(){
+  const seen=new Set();
+  const currencies=D.countries.filter(c=>{if(seen.has(c.currency))return false;seen.add(c.currency);return true;});
+  const rates={};
+  currencies.forEach(c=>{const v=parseFloat(document.getElementById('rate-'+c.currency)?.value)||0;if(v)rates[c.currency]=v;});
+  if(!Object.keys(rates).length){toast('請至少填入一個匯率');return}
+  const rec={id:'R'+Date.now(),date:document.getElementById('rate-date').value||new Date().toISOString().slice(0,10),rates,note:document.getElementById('rate-note').value.trim()};
+  D.rateHistory.push(rec);Object.assign(D.rates,rates);D.rates.date=rec.date;
+  window._save();renderRates();toast('匯率記錄已儲存');
+}
+function deleteRateRecord(id){confirmDialog('刪除此匯率記錄？').then(ok=>{if(!ok)return;D.rateHistory=D.rateHistory.filter(r=>r.id!==id);window._window._save();renderRates();});}
+function doCalc(){
+  const cur=document.getElementById('calc-cur').value;
+  const amt=parseFloat(document.getElementById('calc-amt').value)||0;
+  const rate=getRate(cur,'');
+  document.getElementById('calc-result').value=amt>0&&rate?'NT$ '+Math.round(amt*rate).toLocaleString():'';
+}
+
+// ===== SPLIT (saved records) =====
+function renderSplit(){
+  document.getElementById('topbar-actions').innerHTML='';
+  const addBtn=`<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+    <h2 style="font-size:16px;font-weight:600">朋友分帳</h2>
+    <button class="btn primary" onclick="openAddSplit()">＋ 新增分帳</button>
+  </div>`;
+  if(!D.splitRecords.length){
+    document.getElementById('main-content').innerHTML=addBtn+`<div class="empty-state"><div class="emoji">👥</div><p>還沒有分帳記錄</p><small>新增分帳，可從包裹品項直接匯入</small></div>`;
+    return;
+  }
+  let html='';
+  [...D.splitRecords].reverse().forEach(rec=>{
+    const rateRec=rec.rateId?D.rateHistory.find(r=>r.id===rec.rateId):null;
+    const rate=getRate(rec.currency,rec.rateId);
+    const rateLabel=rateRec?rateRec.date+'匯率':'最新匯率';
+    const persons={};
+    (rec.items||[]).forEach(it=>{
+      const k=it.person||'未分配';
+      if(!persons[k])persons[k]={items:[],total:0};
+      persons[k].items.push(it);persons[k].total+=it.qty*(it.price||0);
+    });
+    const grandTotal=(rec.items||[]).reduce((s,it)=>s+it.qty*(it.price||0),0);
+    const personSummary=Object.entries(persons).map(([name,d])=>{
+      const twd=rate&&d.total?Math.round(d.total*rate):null;
+      return`<div class="person-total-row"><span class="pname">${name}</span>
+        <div class="pamts"><span class="mono">${d.total.toLocaleString()} ${rec.currency||''}</span>${twd!==null?`<br><span style="font-size:11px">≈ NT$ ${twd.toLocaleString()}</span>`:''}</div>
+      </div>`;
+    }).join('');
+    let detailHtml=`<table style="width:100%;font-size:12px;border-collapse:collapse;margin-top:10px"><thead><tr>
+      <th style="text-align:left;padding:4px 8px;color:var(--text3);font-size:11px;border-bottom:1px solid var(--border)">歸屬</th>
+      <th style="text-align:left;padding:4px 8px;color:var(--text3);font-size:11px;border-bottom:1px solid var(--border)">品項</th>
+      <th style="text-align:center;padding:4px 8px;color:var(--text3);font-size:11px;border-bottom:1px solid var(--border);width:44px">數量</th>
+      <th style="text-align:right;padding:4px 8px;color:var(--text3);font-size:11px;border-bottom:1px solid var(--border);width:100px">金額</th>
+    </tr></thead><tbody>`;
+    (rec.items||[]).forEach(it=>{
+      const sub=it.qty*(it.price||0);
+      detailHtml+=`<tr>
+        <td style="padding:5px 8px;border-bottom:1px solid var(--border);color:var(--accent);font-weight:500">${it.person||'—'}</td>
+        <td style="padding:5px 8px;border-bottom:1px solid var(--border)">${it.name||'—'}</td>
+        <td style="padding:5px 8px;border-bottom:1px solid var(--border);text-align:center;color:var(--text2)">×${it.qty}</td>
+        <td style="padding:5px 8px;border-bottom:1px solid var(--border);text-align:right;font-family:'DM Mono',monospace">${sub?sub.toLocaleString():''}</td>
+      </tr>`;
+    });
+    if(grandTotal>0){
+      const twdTot=rate?Math.round(grandTotal*rate):null;
+      detailHtml+=`<tr><td colspan="3" style="padding:6px 8px;text-align:right;font-size:11px;color:var(--text3)">合計</td>
+        <td style="padding:6px 8px;font-weight:600;text-align:right;font-family:'DM Mono',monospace">${grandTotal.toLocaleString()} ${rec.currency||''}${twdTot!==null?`<br><span style="font-weight:400;font-size:11px;color:var(--text3)">≈ NT$ ${twdTot.toLocaleString()}</span>`:''}</td>
+      </tr>`;
+    }
+    detailHtml+=`</tbody></table>`;
+    html+=`<div class="split-record" id="srec-${rec.id}">
+      <div class="split-record-head" onclick="document.getElementById('srec-${rec.id}').classList.toggle('open')">
+        <div>
+          <div style="font-weight:600;font-size:14px">${rec.title||'分帳記錄'}</div>
+          <div style="font-size:11px;color:var(--text3);margin-top:2px">${rec.createdAt||''} · ${rec.currency||''} · ${rateLabel}</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px">
+          <div style="text-align:right">
+            ${grandTotal>0?`<div style="font-weight:600;font-family:'DM Mono',monospace;font-size:13px">${grandTotal.toLocaleString()} ${rec.currency||''}</div>
+            ${rate?`<div style="font-size:11px;color:var(--text3)">≈ NT$ ${Math.round(grandTotal*rate).toLocaleString()}</div>`:''}`:''}
+          </div>
+          <button class="btn xs ghost" onclick="event.stopPropagation();exportSplitImage('${rec.id}')">📷 存圖</button>
+          <button class="btn xs ghost" onclick="event.stopPropagation();editSplitRecord('${rec.id}')">編輯</button>
+          <button class="btn xs danger" onclick="event.stopPropagation();deleteSplitRecord('${rec.id}')">刪除</button>
+          <span class="split-record-chevron">▼</span>
+        </div>
+      </div>
+      <div class="split-record-body">
+        <div style="margin-bottom:10px">${personSummary}</div>
+        ${detailHtml}
+        ${rec.note?`<div style="margin-top:8px;font-size:12px;color:var(--text3)">📝 ${rec.note}</div>`:''}
+      </div>
+    </div>`;
+  });
+  document.getElementById('main-content').innerHTML=addBtn+html;
+}
+
+function openAddSplit(){
+  editingSplitId=null;
+  document.getElementById('split-modal-title').textContent='新增分帳紀錄';
+  fillCurrencySelect('se-currency');populateRateSelect('se-rate-id','');
+  const parcelOpts=`<option value="">選擇包裹…</option>`+D.parcels.filter(p=>p.lineItems&&p.lineItems.length).map(p=>`<option value="${p.id}">${p.label||p.items||'包裹'}</option>`).join('');
+  document.getElementById('se-import-parcel').innerHTML=parcelOpts;
+  ['se-title','se-note'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('se-item-list').innerHTML='';
+  document.getElementById('se-preview').innerHTML='';
+  addSplitItemRow();addSplitItemRow();
+  openOverlay('split-edit');
+}
+function editSplitRecord(id){
+  const rec=D.splitRecords.find(r=>r.id===id);if(!rec)return;
+  editingSplitId=id;
+  document.getElementById('split-modal-title').textContent='編輯分帳紀錄';
+  fillCurrencySelect('se-currency');populateRateSelect('se-rate-id',rec.currency||'');
+  const parcelOpts=`<option value="">選擇包裹…</option>`+D.parcels.filter(p=>p.lineItems&&p.lineItems.length).map(p=>`<option value="${p.id}">${p.label||p.items||'包裹'}</option>`).join('');
+  document.getElementById('se-import-parcel').innerHTML=parcelOpts;
+  document.getElementById('se-title').value=rec.title||'';
+  document.getElementById('se-currency').value=rec.currency||'';
+  document.getElementById('se-rate-id').value=rec.rateId||'';
+  document.getElementById('se-note').value=rec.note||'';
+  document.getElementById('se-item-list').innerHTML='';
+  document.getElementById('se-preview').innerHTML='';
+  (rec.items||[]).forEach(it=>addSplitItemRow(it));
+  openOverlay('split-edit');
+}
+function onSeCurrencyChange(){
+  const cur=document.getElementById('se-currency').value;
+  populateRateSelect('se-rate-id',cur);
+  previewSplit();
+}
+function importParcelItems(){
+  const pid=parseInt(document.getElementById('se-import-parcel').value);
+  if(!pid)return;
+  const p=D.parcels.find(x=>x.id===pid);if(!p||!p.lineItems)return;
+  p.lineItems.forEach(it=>addSplitItemRow({person:'',name:it.name,qty:it.qty,price:it.price}));
+  document.getElementById('se-import-parcel').value='';
+  if(p.currency&&!document.getElementById('se-currency').value){
+    document.getElementById('se-currency').value=p.currency;
+    populateRateSelect('se-rate-id',p.currency);
+    if(p.rateId)document.getElementById('se-rate-id').value=p.rateId;
+  }
+  previewSplit();toast(`已匯入 ${p.lineItems.length} 筆品項`);
+}
+let dragSrc=null;
+function addSplitItemRow(data){
+  const rid='sei'+(++splitItemRowId);
+  const div=document.createElement('div');
+  div.style.cssText='display:grid;grid-template-columns:20px 80px 1fr 64px 110px 26px;gap:6px;align-items:center;background:var(--surface2);border-radius:var(--r);padding:7px 8px;cursor:default';
+  div.id=rid;
+  div.draggable=true;
+  div.addEventListener('dragstart',e=>{
+    dragSrc=div;
+    e.dataTransfer.effectAllowed='move';
+    setTimeout(()=>div.style.opacity='0.4',0);
+  });
+  div.addEventListener('dragend',()=>{
+    div.style.opacity='1';
+    document.querySelectorAll('#se-item-list > div').forEach(r=>r.style.borderTop='');
+    dragSrc=null;
+    previewSplit();
+  });
+  div.addEventListener('dragover',e=>{
+    e.preventDefault();
+    if(dragSrc&&dragSrc!==div){
+      document.querySelectorAll('#se-item-list > div').forEach(r=>r.style.borderTop='');
+      div.style.borderTop='2px solid var(--accent)';
+    }
+  });
+  div.addEventListener('drop',e=>{
+    e.preventDefault();
+    if(dragSrc&&dragSrc!==div){
+      const list=document.getElementById('se-item-list');
+      const kids=[...list.children];
+      const srcIdx=kids.indexOf(dragSrc);
+      const dstIdx=kids.indexOf(div);
+      if(srcIdx<dstIdx) div.after(dragSrc);
+      else div.before(dragSrc);
+      div.style.borderTop='';
+    }
+  });
+  const s='padding:5px 8px;border:1px solid var(--border2);border-radius:var(--r);font-size:13px;font-family:"Noto Sans TC",sans-serif;background:var(--surface);color:var(--text);width:100%';
+  div.innerHTML=`<span style="cursor:grab;color:var(--text3);font-size:16px;text-align:center;user-select:none;touch-action:none" title="拖曳排序">⠿</span>
+    <input type="text" placeholder="姓名" value="${data?.person||''}" oninput="previewSplit()" style="${s}">
+    <input type="text" placeholder="品項" value="${data?.name||''}" oninput="previewSplit()" style="${s}">
+    <input type="number" placeholder="數量" value="${data?.qty||1}" min="1" step="1" oninput="previewSplit()" style="${s};text-align:center;font-family:'DM Mono',monospace">
+    <input type="number" placeholder="金額" value="${data?.price||''}" min="0" step="1" oninput="previewSplit()" style="${s};text-align:right;font-family:'DM Mono',monospace">
+    <button class="item-rm" onclick="document.getElementById('${rid}').remove();previewSplit()">×</button>`;
+  document.getElementById('se-item-list').appendChild(div);
+}
+function getSplitItems(){
+  return[...document.getElementById('se-item-list').children].map(row=>{
+    const ins=row.querySelectorAll('input');
+    return{person:ins[0].value.trim(),name:ins[1].value.trim(),qty:parseFloat(ins[2].value)||1,price:parseFloat(ins[3].value)||0};
+  });
+}
+function previewSplit(){
+  const items=getSplitItems();
+  const cur=document.getElementById('se-currency').value;
+  const rateId=document.getElementById('se-rate-id').value;
+  const rate=getRate(cur,rateId);
+  const persons={};
+  items.filter(it=>it.person&&(it.name||it.price)).forEach(it=>{
+    if(!persons[it.person])persons[it.person]={total:0};
+    persons[it.person].total+=it.qty*(it.price||0);
+  });
+  if(!Object.keys(persons).length){document.getElementById('se-preview').innerHTML='';return;}
+  let html=`<div style="border-top:1px solid var(--border);padding-top:10px;margin-top:8px"><div style="font-size:12px;color:var(--text2);font-weight:500;margin-bottom:6px">各人合計預覽</div>`;
+  Object.entries(persons).forEach(([name,d])=>{
+    const twd=rate&&d.total?Math.round(d.total*rate):null;
+    html+=`<div class="person-total-row"><span class="pname">${name}</span>
+      <div class="pamts"><span class="mono">${d.total.toLocaleString()} ${cur||''}</span>${twd!==null?`<br><span style="font-size:11px">≈ NT$ ${twd.toLocaleString()}</span>`:''}</div>
+    </div>`;
+  });
+  html+=`</div>`;
+  document.getElementById('se-preview').innerHTML=html;
+}
+function saveSplitRecord(){
+  const items=getSplitItems().filter(it=>it.name||it.price);
+  if(!items.length){toast('請至少新增一筆品項');return}
+  const now=new Date().toISOString().slice(0,10);
+  const existing=editingSplitId?D.splitRecords.find(r=>r.id===editingSplitId):null;
+  const rec={
+    id:editingSplitId||'S'+Date.now(),
+    title:document.getElementById('se-title').value.trim()||'分帳記錄',
+    currency:document.getElementById('se-currency').value,
+    rateId:document.getElementById('se-rate-id').value||null,
+    items,note:document.getElementById('se-note').value.trim(),
+    createdAt:existing?existing.createdAt:now
+  };
+  if(editingSplitId){D.splitRecords=D.splitRecords.map(r=>r.id===editingSplitId?rec:r);}
+  else{D.splitRecords.push(rec);}
+  window._save();closeOverlay('split-edit');renderSplit();toast(editingSplitId?'分帳已更新':'分帳記錄已儲存');
+}
+function deleteSplitRecord(id){confirmDialog('確定刪除此分帳記錄？').then(ok=>{if(!ok)return;D.splitRecords=D.splitRecords.filter(r=>r.id!==id);window._window._save();renderSplit();});}
+
+function exportSplitImage(id){
+  const rec=D.splitRecords.find(r=>r.id===id);if(!rec)return;
+  const rate=getRate(rec.currency,rec.rateId);
+  const rateRec=rec.rateId?D.rateHistory.find(r=>r.id===rec.rateId):null;
+  const rateLabel=rateRec?rateRec.date:D.rates.date||'最新';
+
+  // build persons map
+  const persons={};
+  (rec.items||[]).forEach(it=>{
+    const k=it.person||'未分配';
+    if(!persons[k])persons[k]={items:[],total:0};
+    persons[k].items.push(it);persons[k].total+=it.qty*(it.price||0);
+  });
+  const grandTotal=(rec.items||[]).reduce((s,it)=>s+it.qty*(it.price||0),0);
+  const personKeys=Object.keys(persons);
+
+  // — layout constants —
+  const W=640;
+  const PAD=32;
+  const COL_W=[200,80,100]; // person, qty, amount  (item name takes rest)
+  const ITEM_NAME_W=W-PAD*2-COL_W[0]-COL_W[1]-COL_W[2];
+  const ROW_H=36;
+  const HEAD_H=80;
+  const PERSON_BLOCK_H=personKeys.length*(ROW_H+4)+16;
+  const DIVIDER=1;
+  const TABLE_HEAD_H=32;
+  const ITEMS_H=(rec.items||[]).length*ROW_H+TABLE_HEAD_H+ROW_H; // rows + header + total row
+  const NOTE_H=rec.note?36:0;
+  const FOOTER_H=40;
+  const H=HEAD_H+16+PERSON_BLOCK_H+16+DIVIDER+8+TABLE_HEAD_H+(rec.items||[]).length*ROW_H+ROW_H+NOTE_H+FOOTER_H+PAD;
+
+  const canvas=document.createElement('canvas');
+  canvas.width=W*2;canvas.height=H*2; // retina
+  const ctx=canvas.getContext('2d');
+  ctx.scale(2,2);
+
+  // helpers
+  const C={bg:'#f5f3ef',surface:'#ffffff',border:'#ddd9d2',text:'#1a1814',text2:'#6b6760',text3:'#9e9b95',accent:'#2d5a27',accentBg:'#eef4ed',surface2:'#f0ede8',warn:'#8a6914'};
+  function rect(x,y,w,h,r,fill,stroke){
+    ctx.beginPath();
+    if(r){ctx.moveTo(x+r,y);ctx.lineTo(x+w-r,y);ctx.quadraticCurveTo(x+w,y,x+w,y+r);ctx.lineTo(x+w,y+h-r);ctx.quadraticCurveTo(x+w,y+h,x+w-r,y+h);ctx.lineTo(x+r,y+h);ctx.quadraticCurveTo(x,y+h,x,y+h-r);ctx.lineTo(x,y+r);ctx.quadraticCurveTo(x,y,x+r,y);}
+    else{ctx.rect(x,y,w,h);}
+    ctx.closePath();
+    if(fill){ctx.fillStyle=fill;ctx.fill();}
+    if(stroke){ctx.strokeStyle=stroke;ctx.lineWidth=1;ctx.stroke();}
+  }
+  function txt(t,x,y,size,color,align,weight,maxW){
+    ctx.font=`${weight||400} ${size}px 'Noto Sans TC',sans-serif`;
+    ctx.fillStyle=color||C.text;
+    ctx.textAlign=align||'left';
+    ctx.textBaseline='middle';
+    if(maxW&&ctx.measureText(t).width>maxW){
+      while(ctx.measureText(t+'…').width>maxW&&t.length>0)t=t.slice(0,-1);
+      t+=t.length?'…':'';
+    }
+    ctx.fillText(t,x,y);
+  }
+  function line(x1,y1,x2,y2,color){
+    ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);
+    ctx.strokeStyle=color||C.border;ctx.lineWidth=1;ctx.stroke();
+  }
+
+  // background
+  rect(0,0,W,H,0,C.bg);
+  // card
+  rect(PAD-8,8,W-PAD*2+16,H-16,12,C.surface,C.border);
+
+  let y=PAD;
+
+  // — header —
+  txt('📋',PAD,y+14,18);
+  txt(rec.title||'分帳記錄',PAD+28,y+14,17,C.text,'left',600);
+  txt(`${rec.createdAt||''} · 匯率 ${rateLabel}`,PAD+28,y+34,11,C.text3);
+  // grand total top-right
+  if(grandTotal>0){
+    txt(`${grandTotal.toLocaleString()} ${rec.currency||''}`,W-PAD,y+14,15,C.text,'right',600);
+    if(rate) txt(`≈ NT$ ${Math.round(grandTotal*rate).toLocaleString()}`,W-PAD,y+34,11,C.text3,'right');
+  }
+
+  y+=HEAD_H-8;
+  line(PAD,y,W-PAD,y,C.border);
+  y+=16;
+
+  // — person summary —
+  txt('各人合計',PAD,y,11,C.text3,'left',500);
+  y+=16;
+  personKeys.forEach(name=>{
+    const d=persons[name];
+    const twd=rate&&d.total?Math.round(d.total*rate):null;
+    rect(PAD,y,W-PAD*2,ROW_H,8,C.accentBg);
+    txt(name,PAD+12,y+ROW_H/2,13,C.accent,'left',500);
+    const amtStr=`${d.total.toLocaleString()} ${rec.currency||''}${twd!==null?' ≈ NT$ '+twd.toLocaleString():''}`;
+    txt(amtStr,W-PAD-10,y+ROW_H/2,12,C.text2,'right');
+    y+=ROW_H+4;
+  });
+
+  y+=12;
+  line(PAD,y,W-PAD,y,C.border);
+  y+=12;
+
+  // — detail table header —
+  const cols_x=[PAD, PAD+COL_W[0], PAD+COL_W[0]+ITEM_NAME_W, PAD+COL_W[0]+ITEM_NAME_W+COL_W[1]];
+  rect(PAD,y,W-PAD*2,TABLE_HEAD_H,0,C.surface2);
+  txt('歸屬',cols_x[0]+8,y+TABLE_HEAD_H/2,11,C.text3,'left',500);
+  txt('品項',cols_x[1]+8,y+TABLE_HEAD_H/2,11,C.text3,'left',500);
+  txt('數量',cols_x[2]+COL_W[1]/2,y+TABLE_HEAD_H/2,11,C.text3,'center',500);
+  txt('金額',W-PAD-8,y+TABLE_HEAD_H/2,11,C.text3,'right',500);
+  y+=TABLE_HEAD_H;
+
+  // — rows —
+  (rec.items||[]).forEach((it,i)=>{
+    const sub=it.qty*(it.price||0);
+    if(i%2===1) rect(PAD,y,W-PAD*2,ROW_H,0,'#faf9f6');
+    line(PAD,y,W-PAD,y,C.border);
+    txt(it.person||'—',cols_x[0]+8,y+ROW_H/2,12,C.accent,'left',500);
+    txt(it.name||'—',cols_x[1]+8,y+ROW_H/2,12,C.text,'left',400,ITEM_NAME_W-12);
+    txt('×'+it.qty,cols_x[2]+COL_W[1]/2,y+ROW_H/2,12,C.text2,'center');
+    txt(sub?sub.toLocaleString():'',W-PAD-8,y+ROW_H/2,12,C.text,'right');
+    y+=ROW_H;
+  });
+
+  // — total row —
+  line(PAD,y,W-PAD,y,C.border);
+  rect(PAD,y,W-PAD*2,ROW_H,0,C.surface2);
+  txt('合計',W-PAD-8-120,y+ROW_H/2,12,C.text3,'right');
+  if(grandTotal>0){
+    const twdTot=rate?Math.round(grandTotal*rate):null;
+    const totStr=`${grandTotal.toLocaleString()} ${rec.currency||''}${twdTot!==null?' ≈ NT$ '+twdTot.toLocaleString():''}`;
+    txt(totStr,W-PAD-8,y+ROW_H/2,12,C.text,'right',600);
+  }
+  y+=ROW_H;
+
+  // — note —
+  if(rec.note){
+    y+=8;
+    txt('📝 '+rec.note,PAD+4,y+14,11,C.text3);
+    y+=NOTE_H;
+  }
+
+  // — footer —
+  y+=12;
+  txt('集運倉管理系統',W/2,y+14,10,C.text3,'center');
+
+  // — 偵測裝置，決定呈現方式 —
+  const dataUrl=canvas.toDataURL('image/png');
+  const isMobile=/iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+
+  // 圖片預覽 modal（手機長按存、桌機可選下載）
+  document.getElementById('imgpreview-img').src=dataUrl;
+  document.getElementById('imgpreview-hint').textContent=isMobile?'📱 長按圖片即可儲存到相簿':'電腦：右鍵另存圖片，或點下載按鈕';
+  const dlLink=document.getElementById('imgpreview-dl');
+  dlLink.href=dataUrl;
+  dlLink.download=`分帳_${rec.title||'記錄'}_${rec.createdAt||''}.png`;
+  dlLink.style.display=isMobile?'none':'inline';
+  openOverlay('imgpreview');
+}
+
+// ===== AUTH UI =====
+function showLoginScreen(){
+  document.getElementById('app-shell').style.display='none';
+  document.getElementById('login-screen').style.display='flex';
+}
+function showAppShell(){
+  document.getElementById('login-screen').style.display='none';
+  document.getElementById('app-shell').style.display='flex';
+}
+function showForgotPassword(){
+  document.getElementById('forgot-email').value=document.getElementById('login-email').value||'';
+  document.getElementById('forgot-msg').textContent='';
+  openOverlay('forgot');
+}
+// expose nav for Firebase module
+window.nav=nav;
+</script>
+</body>
+</html>
