@@ -698,14 +698,12 @@ onAuthStateChanged(auth,async user=>{
     currentUser=user;
     await loadFromCloud();
     showAppShell();
-    window.nav('parcels');
+    nav('parcels');
   }else{
     showLoginScreen();
   }
 });
-</script>
 
-<script>
 // ===== STATE =====
 let currentPage='parcels';
 let editingWHId=null,editingTrackId=null,editingParcelId=null,editingSplitId=null;
@@ -1713,8 +1711,20 @@ function showForgotPassword(){
   document.getElementById('forgot-msg').textContent='';
   openOverlay('forgot');
 }
-// expose nav for Firebase module
+window.showForgotPassword=showForgotPassword;
 window.nav=nav;
+// 把所有 onclick 用到的函式暴露給 HTML
+const _expose=['openAddParcel','openEditParcel','deleteParcel','setParcelStatus',
+  'saveParcel','addItemRow','recalcItems','onWhSelect',
+  'openAddShipment','saveShipment','deleteShipment','togglePS','openTrackingModal','saveTracking',
+  'openAddWarehouse','editWarehouse','saveWarehouse','deleteWarehouse','toggleWhCard',
+  'saveCountry','deleteCountry','openOverlay','closeOverlay',
+  'saveRateRecord','deleteRateRecord','doCalc',
+  'openAddSplit','editSplitRecord','saveSplitRecord','deleteSplitRecord',
+  'addSplitItemRow','previewSplit','importParcelItems','onSeCurrencyChange','exportSplitImage',
+  'confirmResolve','toast','copyText',
+];
+_expose.forEach(fn=>{if(typeof eval(fn)==='function')window[fn]=eval(fn);});
 </script>
 </body>
 </html>
