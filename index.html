@@ -559,6 +559,7 @@ const DEF={
   countries:[
     {id:'JP',name:'日本',flag:'🇯🇵',currency:'JPY',currencyName:'日圓'},
     {id:'KR',name:'韓國',flag:'🇰🇷',currency:'KRW',currencyName:'韓圓'},
+    {id:'TW',name:'台灣',flag:'🇹🇼',currency:'TWD',currencyName:'新台幣'},
   ],
   warehouses:[],parcels:[],shipments:[],
   rateHistory:[],
@@ -843,7 +844,7 @@ function renderParcels(){
     <div class="stat-card"><div class="s-label">全部包裹</div><div class="s-val">${all.length}</div></div>
   </div>`;
   const filterHtml=`<div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap">
-    <select onchange="parcelFilter=this.value;renderParcels()" style="padding:8px 12px;border:1px solid var(--border2);border-radius:999px;font-size:13px;font-family:'Noto Sans TC',sans-serif;background:var(--surface);color:var(--text);cursor:pointer;appearance:none;-webkit-appearance:none;padding-right:28px;background-image:url('data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%2212%22 height=%2212%22 viewBox=%220 0 12 12%22><path fill=%22%239e9b95%22 d=%22M6 8L1 3h10z%22/></svg>');background-repeat:no-repeat;background-position:right 10px center">
+    <select onchange="window._setFilter(this.value)" style="padding:8px 12px;border:1px solid var(--border2);border-radius:999px;font-size:13px;font-family:'Noto Sans TC',sans-serif;background:var(--surface);color:var(--text);cursor:pointer;appearance:none;-webkit-appearance:none;padding-right:28px;background-image:url('data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%2212%22 height=%2212%22 viewBox=%220 0 12 12%22><path fill=%22%239e9b95%22 d=%22M6 8L1 3h10z%22/></svg>');background-repeat:no-repeat;background-position:right 10px center">
       <option value="active" ${parcelFilter==='active'?'selected':''}>全部進行中 (${active.length})</option>
       <option value="ordered" ${parcelFilter==='ordered'?'selected':''}>🛒 已下單 (${all.filter(p=>p.status==='ordered').length})</option>
       <option value="shipping_to_wh" ${parcelFilter==='shipping_to_wh'?'selected':''}>✈️ 寄往集運倉 (${all.filter(p=>p.status==='shipping_to_wh').length})</option>
@@ -919,16 +920,26 @@ function renderParcels(){
         metaHtml+=`<div class="pf"><div class="pf-label">${f.label}</div><div class="pf-val${f.mono?' mono':''}">${f.val}${copyBtn}</div></div>`;
       });
       metaHtml+=`</div>`;
-      cardsHtml+=`<div class="parcel-card${p.status==='received'?' status-done':''}">
-        <div class="parcel-card-head">
-          <div style="font-weight:600;font-size:14px">${displayName}</div>
-          <div style="display:flex;gap:6px">
+      cardsHtml+=`<div class="parcel-card${p.status==='received'?' status-done':''}" id="pc-${p.id}">
+        <div class="parcel-card-head" onclick="window._toggleCard('pc-${p.id}')" style="cursor:pointer">
+          <div style="flex:1">
+            <div style="font-weight:600;font-size:14px;display:flex;align-items:center;gap:8px">
+              ${displayName}
+              <span style="font-size:11px;color:var(--text3);font-weight:400">${STATUSES[si]?.icon||''} ${STATUSES[si]?.label||''}</span>
+            </div>
+          </div>
+          <div style="display:flex;gap:6px;align-items:center">
+            <span class="pc-chevron" style="font-size:11px;color:var(--text3);transition:transform .2s">▼</span>
+          </div>
+        </div>
+        <div class="pc-body" style="display:none">
+          ${flowHtml}${itemsHtml}${metaHtml}
+          ${p.note?`<div style="font-size:12px;color:var(--text3);margin-top:4px">📝 ${p.note}</div>`:''}
+          <div style="display:flex;gap:6px;justify-content:flex-end;margin-top:12px;padding-top:10px;border-top:1px solid var(--border)">
             <button class="btn xs ghost" onclick="openEditParcel(${p.id})">編輯</button>
             <button class="btn xs danger" onclick="deleteParcel(${p.id})">刪除</button>
           </div>
         </div>
-        ${flowHtml}${itemsHtml}${metaHtml}
-        ${p.note?`<div style="font-size:12px;color:var(--text3);margin-top:4px">📝 ${p.note}</div>`:''}
       </div>`;
     });
   }
@@ -1102,26 +1113,38 @@ function renderShipments(){
       }
       itemsHtml+=`</tbody></table></div>`;
     }
-    html+=`<div class="card">
-      <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:10px">
-        <div><span style="font-size:15px;font-weight:600">${s.name}</span>${c?`<span class="badge badge-country" style="margin-left:8px">${c.flag} ${c.name}</span>`:''}</div>
-        <button class="btn xs danger" onclick="deleteShipment(${s.id})">刪除</button>
+    html+=`<div class="card" id="sc-${s.id}" style="padding:0;overflow:hidden">
+      <div onclick="window._toggleCard('sc-${s.id}')" style="cursor:pointer;padding:16px 20px;display:flex;align-items:center;justify-content:space-between">
+        <div>
+          <div style="font-size:15px;font-weight:600;display:flex;align-items:center;gap:8px">
+            ${s.name}${c?`<span class="badge badge-country" style="font-size:11px">${c.flag} ${c.name}</span>`:''}
+          </div>
+          <div style="font-size:12px;color:var(--text3);margin-top:3px">
+            ${s.shipdate?`預計發貨 ${s.shipdate}`:'未設定發貨日'}
+            ${shipdiff!==null?` · ${shipdiff<0?'已過期':'還有'+shipdiff+'天'}`:''}
+          </div>
+        </div>
+        <span class="pc-chevron" style="font-size:11px;color:var(--text3);transition:transform .2s">▼</span>
       </div>
-      <div class="info-pill-row">
-        <span class="info-pill">建立 <b>${s.createdAt||'—'}</b></span>
-        <span class="info-pill">預計發貨 <b>${s.shipdate||'未定'}</b>${shipdiff!==null?` <span class="badge ${shipdiff<0?'badge-danger':shipdiff<=14?'badge-warn':'badge-gray'}">${shipdiff<0?'已過期':'還有'+shipdiff+'天'}</span>`:''}</span>
-        ${s.freight?`<span class="info-pill">運費 <b>${s.freight.toLocaleString()} ${s.currency}</b>${freightTWD?' ≈ NT$'+freightTWD.toLocaleString():''}</span>`:''}
-        ${s.paydate?`<span class="info-pill">結帳日 <b>${s.paydate}</b></span>`:''}
+      <div class="pc-body" style="display:none;padding:0 20px 16px">
+        <div class="info-pill-row">
+          <span class="info-pill">建立 <b>${s.createdAt||'—'}</b></span>
+          ${s.freight?`<span class="info-pill">運費 <b>${s.freight.toLocaleString()} ${s.currency}</b>${freightTWD?' ≈ NT$'+freightTWD.toLocaleString():''}</span>`:''}
+          ${s.paydate?`<span class="info-pill">結帳日 <b>${s.paydate}</b></span>`:''}
+        </div>
+        <div style="margin-bottom:10px">${parcels.map(p=>`<span class="tag-chip">${p.label||p.items||p.trackno||'包裹'}</span>`).join('')||'<span style="color:var(--text3);font-size:12px">無關聯包裹</span>'}</div>
+        ${itemsHtml}
+        <div style="display:flex;align-items:center;gap:10px;margin-top:4px">
+          <span style="font-size:12px;color:var(--text2)">國際貨運：</span>
+          ${hasTrack?`<span class="tracking-chip has">${s.intltrack}</span><button class="btn xs ghost" onclick="copyText('${s.intltrack}')">複製</button>`:
+          `<span class="tracking-chip empty" onclick="openTrackingModal(${s.id})">⚠ 點此填入貨運單號</span>`}
+          ${hasTrack?`<button class="btn xs ghost" onclick="openTrackingModal(${s.id})">更新</button>`:''}
+        </div>
+        ${s.note?`<div style="margin-top:8px;font-size:12px;color:var(--text3)">📝 ${s.note}</div>`:''}
+        <div style="display:flex;justify-content:flex-end;margin-top:12px;padding-top:10px;border-top:1px solid var(--border)">
+          <button class="btn xs danger" onclick="deleteShipment(${s.id})">刪除訂單</button>
+        </div>
       </div>
-      <div style="margin-bottom:10px">${parcels.map(p=>`<span class="tag-chip">${p.label||p.items||p.trackno||'包裹'}</span>`).join('')||'<span style="color:var(--text3);font-size:12px">無關聯包裹</span>'}</div>
-      ${itemsHtml}
-      <div style="display:flex;align-items:center;gap:10px;margin-top:4px">
-        <span style="font-size:12px;color:var(--text2)">國際貨運：</span>
-        ${hasTrack?`<span class="tracking-chip has">${s.intltrack}</span><button class="btn xs ghost" onclick="copyText('${s.intltrack}')">複製</button>`:
-        `<span class="tracking-chip empty" onclick="openTrackingModal(${s.id})">⚠ 點此填入貨運單號</span>`}
-        ${hasTrack?`<button class="btn xs ghost" onclick="openTrackingModal(${s.id})">更新</button>`:''}
-      </div>
-      ${s.note?`<div style="margin-top:8px;font-size:12px;color:var(--text3)">📝 ${s.note}</div>`:''}
     </div>`;
   });
   document.getElementById('main-content').innerHTML=addBtn+html;
@@ -1715,6 +1738,16 @@ function showForgotPassword(){
 }
 window.showForgotPassword=showForgotPassword;
 window.nav=nav;
+window._setFilter=function(val){parcelFilter=val;renderParcels();};
+window._toggleCard=function(id){
+  const card=document.getElementById(id);
+  if(!card)return;
+  const body=card.querySelector('.pc-body');
+  const chevron=card.querySelector('.pc-chevron');
+  const isOpen=body.style.display!=='none';
+  body.style.display=isOpen?'none':'block';
+  if(chevron)chevron.style.transform=isOpen?'':'rotate(180deg)';
+};
 // 把所有 onclick 用到的函式暴露給 HTML
 const _expose=['openAddParcel','openEditParcel','deleteParcel','setParcelStatus',
   'saveParcel','addItemRow','recalcItems','onWhSelect',
