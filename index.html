@@ -254,7 +254,7 @@ tbody tr:hover td{background:var(--surface2)}
     <nav class="top-nav" id="top-nav">
       <button class="top-nav-item active" onclick="nav('parcels')" id="tnav-parcels"><span class="icon">📬</span>包裹管理</button>
       <button class="top-nav-item" onclick="nav('shipments')" id="tnav-shipments"><span class="icon">🚢</span>出貨訂單</button>
-      <button class="top-nav-item" onclick="nav('warehouses')" id="tnav-warehouses"><span class="icon">🏢</span>集運倉與國別</button>
+      <button class="top-nav-item" onclick="nav('warehouses')" id="tnav-warehouses"><span class="icon">🏢</span>收貨地點與國別</button>
       <button class="top-nav-item" onclick="nav('rates')" id="tnav-rates"><span class="icon">💱</span>匯率設定</button>
       <button class="top-nav-item" onclick="nav('split')" id="tnav-split"><span class="icon">👥</span>朋友分帳</button>
       <div style="flex:1"></div>
@@ -271,7 +271,7 @@ tbody tr:hover td{background:var(--surface2)}
       <span class="bnav-icon">🚢</span><span class="bnav-label">出貨</span>
     </button>
     <button class="bnav-item" onclick="nav('warehouses')" id="bnav-warehouses">
-      <span class="bnav-icon">🏢</span><span class="bnav-label">集運倉</span>
+      <span class="bnav-icon">🏢</span><span class="bnav-label">收貨地點</span>
     </button>
     <button class="bnav-item" onclick="nav('rates')" id="bnav-rates">
       <span class="bnav-icon">💱</span><span class="bnav-label">匯率</span>
@@ -304,7 +304,7 @@ tbody tr:hover td{background:var(--surface2)}
       </div>
     </div>
     <div class="form-row">
-      <div class="field"><label>集運倉</label>
+      <div class="field"><label>收貨地點</label>
         <select id="p-wh-id" onchange="onWhSelect()"><option value="">選擇集運倉</option></select>
       </div>
     </div>
@@ -387,26 +387,21 @@ tbody tr:hover td{background:var(--surface2)}
   </div>
 </div>
 
-<!-- MODAL: 集運倉 -->
+<!-- MODAL: 收貨地點 -->
 <div class="overlay" id="overlay-warehouse">
   <div class="modal">
     <div class="modal-header">
-      <h3 id="wh-modal-title">新增集運倉</h3>
+      <h3 id="wh-modal-title">新增收貨地點</h3>
       <button class="modal-close" onclick="closeOverlay('warehouse')">✕</button>
     </div>
     <div class="form-row">
-      <div class="field" style="flex:2"><label>集運倉名稱</label><input type="text" id="wh-name" placeholder="e.g. Bigato 韓國集運"></div>
+      <div class="field" style="flex:2"><label>地點名稱</label><input type="text" id="wh-name" placeholder="e.g. 日本/韓國集運、超商、朋友代購"></div>
       <div class="field"><label>所屬國別</label><select id="wh-country"><option value="">選擇</option></select></div>
     </div>
     <div class="form-row">
       <div class="field"><label>收件人姓名</label><input type="text" id="wh-recipient" placeholder="Your name in English"></div>
       <div class="field"><label>幣別</label>
-        <select id="wh-currency">
-          <option value="">選擇</option>
-          <option value="JPY">JPY 日圓</option><option value="KRW">KRW 韓圓</option>
-          <option value="USD">USD 美元</option><option value="GBP">GBP 英鎊</option>
-          <option value="EUR">EUR 歐元</option><option value="CNY">CNY 人民幣</option>
-        </select>
+        <select id="wh-currency"><option value="">選擇</option></select>
       </div>
     </div>
     <div class="form-row"><div class="field"><label>倉庫地址</label><textarea id="wh-address" placeholder="可貼上韓文/日文地址" style="min-height:80px"></textarea></div></div>
@@ -599,6 +594,10 @@ async function loadFromCloud(){
     if(snap.exists()&&snap.data().data){
       D=snap.data().data;
       if(!D.countries)D.countries=DEF.countries;
+      // 補上預設國別（避免重複）
+      DEF.countries.forEach(dc=>{
+        if(!D.countries.find(c=>c.id===dc.id))D.countries.push(dc);
+      });
       if(!D.rateHistory)D.rateHistory=[];
       if(!D.splitRecords)D.splitRecords=[];
       if(!D.rates)D.rates=DEF.rates;
@@ -713,7 +712,7 @@ let parcelFilter='active';
 let itemRowId=0,splitItemRowId=0;
 
 // ===== NAV =====
-const PAGE_TITLES={parcels:'包裹管理',shipments:'出貨訂單',warehouses:'集運倉與國別',rates:'匯率設定',split:'朋友分帳'};
+const PAGE_TITLES={parcels:'包裹管理',shipments:'出貨訂單',warehouses:'收貨地點與國別',rates:'匯率設定',split:'朋友分帳'};
 function nav(page){
   currentPage=page;
   // 同步底部導覽
@@ -793,8 +792,7 @@ function fillCurrencySelect(selId){
   const seen=new Set();
   const opts=`<option value="">— 不指定 —</option>`+D.countries.filter(c=>{if(seen.has(c.currency))return false;seen.add(c.currency);return true;}).map(c=>`<option value="${c.currency}">${c.currency} ${c.currencyName}</option>`).join('');
   const el=document.getElementById(selId);if(!el)return;const v=el.value;el.innerHTML=opts;if(v)el.value=v;
-}
-function getRate(currency,rateId){
+}function getRate(currency,rateId){
   if(!currency)return 0;
   if(rateId){const r=D.rateHistory.find(x=>x.id==rateId);if(r&&r.rates[currency])return r.rates[currency];}
   if(D.rateHistory.length){
@@ -1201,7 +1199,7 @@ function renderWarehouses(){
   document.getElementById('topbar-actions').innerHTML='';
   let whHtml='';
   if(!D.warehouses.length){
-    whHtml=`<div class="empty-state" style="padding:28px 20px"><div class="emoji">🏢</div><p>還沒有集運倉資料</p><small>新增常用集運倉，輕鬆複製地址和電話</small></div>`;
+    whHtml=`<div class="empty-state" style="padding:28px 20px"><div class="emoji">🏢</div><p>還沒有收貨地點</p><small>新增常用收貨地點，輕鬆複製地址和電話</small></div>`;
   }else{
     whHtml=`<div class="wh-grid">`;
     D.warehouses.forEach(wh=>{
@@ -1236,7 +1234,7 @@ function renderWarehouses(){
     <td><button class="btn xs danger" onclick="deleteCountry('${c.id}')">刪除</button></td>
   </tr>`).join('');
   document.getElementById('main-content').innerHTML=`
-    <div class="section-head"><h2>🏢 集運倉資料庫</h2><button class="btn primary" onclick="openAddWarehouse()">＋ 新增集運倉</button></div>
+    <div class="section-head"><h2>🏢 收貨地點資料庫</h2><button class="btn primary" onclick="openAddWarehouse()">＋ 新增收貨地點</button></div>
     ${whHtml}
     <div class="section-head" style="margin-top:28px"><h2>🌏 國別管理</h2><button class="btn primary" onclick="openOverlay('country')">＋ 新增國別</button></div>
     <div class="card"><div class="table-wrap"><table>
@@ -1247,26 +1245,28 @@ function renderWarehouses(){
 function toggleWhCard(id){document.getElementById('whcard-'+id)?.classList.toggle('open');}
 function openAddWarehouse(){
   editingWHId=null;populateCountrySelects();
+  fillCurrencySelect('wh-currency');
   ['wh-name','wh-recipient','wh-address','wh-phone','wh-zip','wh-member','wh-url','wh-note'].forEach(id=>document.getElementById(id).value='');
-  document.getElementById('wh-modal-title').textContent='新增集運倉';openOverlay('warehouse');
+  document.getElementById('wh-modal-title').textContent='新增收貨地點';openOverlay('warehouse');
 }
 function editWarehouse(id){
   const wh=D.warehouses.find(w=>w.id===id);if(!wh)return;
   editingWHId=id;populateCountrySelects();
+  fillCurrencySelect('wh-currency');
   document.getElementById('wh-name').value=wh.name||'';document.getElementById('wh-country').value=wh.country||'';
   document.getElementById('wh-currency').value=wh.currency||'';document.getElementById('wh-recipient').value=wh.recipient||'';
   document.getElementById('wh-address').value=wh.address||'';document.getElementById('wh-phone').value=wh.phone||'';
   document.getElementById('wh-zip').value=wh.zip||'';document.getElementById('wh-member').value=wh.member||'';
   document.getElementById('wh-url').value=wh.url||'';document.getElementById('wh-note').value=wh.note||'';
-  document.getElementById('wh-modal-title').textContent='編輯集運倉';openOverlay('warehouse');
+  document.getElementById('wh-modal-title').textContent='編輯收貨地點';openOverlay('warehouse');
 }
 function saveWarehouse(){
   const wh={id:editingWHId||Date.now(),name:document.getElementById('wh-name').value.trim(),country:document.getElementById('wh-country').value,currency:document.getElementById('wh-currency').value,recipient:document.getElementById('wh-recipient').value.trim(),address:document.getElementById('wh-address').value.trim(),phone:document.getElementById('wh-phone').value.trim(),zip:document.getElementById('wh-zip').value.trim(),member:document.getElementById('wh-member').value.trim(),url:document.getElementById('wh-url').value.trim(),note:document.getElementById('wh-note').value.trim()};
   if(!wh.name){toast('請輸入集運倉名稱');return}
   if(editingWHId){D.warehouses=D.warehouses.map(w=>w.id===editingWHId?wh:w);}else{D.warehouses.push(wh);}
-  window._save();closeOverlay('warehouse');renderWarehouses();toast('集運倉資料已儲存');
+  window._save();closeOverlay('warehouse');renderWarehouses();toast('收貨地點已儲存');
 }
-function deleteWarehouse(id){confirmDialog('確定刪除此集運倉？').then(ok=>{if(!ok)return;D.warehouses=D.warehouses.filter(w=>w.id!==id);window._save();renderWarehouses();});}
+function deleteWarehouse(id){confirmDialog('確定刪除此收貨地點？').then(ok=>{if(!ok)return;D.warehouses=D.warehouses.filter(w=>w.id!==id);window._save();renderWarehouses();});}
 function saveCountry(){
   const c={id:'C'+Date.now(),flag:document.getElementById('c-flag').value.trim()||'🏳',name:document.getElementById('c-name').value.trim(),currency:document.getElementById('c-currency').value.trim().toUpperCase(),currencyName:document.getElementById('c-currency-name').value.trim()};
   if(!c.name||!c.currency){toast('請填入國別名稱與幣別代號');return}
